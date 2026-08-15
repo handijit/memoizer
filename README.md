@@ -16,6 +16,41 @@ work when the arguments have already been seen.
   `Date`, `RegExp`, `URL`, typed arrays and class instances all key correctly.
 - **Works anywhere.** ESM, CommonJS and UMD builds; SSR-safe; no framework
   coupling. React, Vue, Nuxt, Next, Svelte or plain `<script>`.
+- **100% test coverage**, enforced in CI across 182 tests.
+
+---
+
+## Table of contents
+
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Quick start](#quick-start)
+- [When to use it](#when-to-use-it)
+- [API reference](#api-reference)
+  - [`new Memofy(params?)`](#new-memofyparams)
+  - [`memofy.memoize(fn, deps?, context?, options?)`](#memofymemoizefn-deps-context-options)
+  - [`memofy.clear()` / `memofy.init()`](#memofyclear--memofyinit)
+  - [The memoized function](#the-memoized-function)
+  - [`createKey(args)`](#createkeyargs)
+  - [Exported types](#exported-types)
+- [Guides](#guides)
+  - [Dependencies](#dependencies)
+  - [Context and `this`](#context-and-this)
+  - [Async functions](#async-functions)
+  - [Cache size and expiry](#cache-size-and-expiry)
+  - [Custom keys with `resolver`](#custom-keys-with-resolver)
+  - [Debugging](#debugging)
+- [Framework integration](#framework-integration)
+- [How arguments are compared](#how-arguments-are-compared)
+- [Performance](#performance)
+- [Bundle size](#bundle-size)
+- [FAQ and troubleshooting](#faq-and-troubleshooting)
+- [Migrating from v2](#migrating-from-v2)
+- [Contributing](#contributing)
+- [Releasing](#releasing)
+- [License](#license)
+
+---
 
 ## Requirements
 
@@ -50,9 +85,10 @@ sum(1, 2); // runs slowSum
 sum(1, 2); // returns the cached result
 ```
 
-CommonJS:
+Named and CommonJS imports work too:
 
 ```js
+import { Memofy } from "@ahmetilhn/memofy";
 const { Memofy } = require("@ahmetilhn/memofy");
 ```
 
@@ -65,41 +101,179 @@ Browser, no build step:
 </script>
 ```
 
-## API
+## When to use it
+
+Memoization trades memory for time, and building the cache key is not free.
+Roughly:
+
+| Situation                                              | Worth memoizing? |
+| ------------------------------------------------------ | ---------------- |
+| Function takes longer than ~1 µs and repeats its inputs | Yes              |
+| Parsing, formatting, tree walking, derived state        | Yes              |
+| Deduplicating in-flight network requests                | Yes              |
+| Trivial arithmetic, property access                     | No — the key costs more |
+| Every call has unique arguments                         | No — pure overhead |
+| The function is not pure (reads a clock, random, I/O state) | No — you will cache stale answers |
+
+See [Performance](#performance) for measured key-building costs.
+
+---
+
+## API reference
 
 ### `new Memofy(params?)`
 
-| Option                  | Type      | Default | Description                                                        |
-| ----------------------- | --------- | ------- | ------------------------------------------------------------------ |
-| `maxSize`               | `number`  | `1000`  | Cached results per memoized function. `0` or `Infinity` = unbounded. |
-| `ttl`                   | `number`  | —       | Milliseconds a result stays valid. Omitted means no expiry.          |
-| `cacheRejectedPromises` | `boolean` | `false` | Keep rejected promises cached.                                       |
-| `hasLogs`               | `boolean` | `false` | Log every cache hit.                                                 |
-| `trace`                 | `boolean` | `false` | Expose the instance as `window.__memofy__` in browsers.              |
+Creates an isolated cache universe. Functions memoized by one instance never
+share results with another.
+
+```ts
+new Memofy(params?: MemofyParams)
+```
+
+| Option                  | Type      | Default | Description                                                          |
+| ----------------------- | --------- | ------- | -------------------------------------------------------------------- |
+| `maxSize`               | `number`  | `1000`  | Cached results per memoized function. `0` or `Infinity` = unbounded.  |
+| `ttl`                   | `number`  | —       | Milliseconds a result stays valid. Omitted means no expiry.           |
+| `cacheRejectedPromises` | `boolean` | `false` | Keep rejected promises cached instead of evicting them.               |
+| `hasLogs`               | `boolean` | `false` | Log every cache hit to the console.                                   |
+| `trace`                 | `boolean` | `false` | Expose the instance as `window.__memofy__` in browsers.               |
+
+```js
+const memofy = new Memofy({ maxSize: 500, ttl: 60_000 });
+```
+
+Invalid values fall back to the default rather than throwing: a negative
+`maxSize`, a non-numeric `ttl` or a non-boolean flag is ignored.
+
+---
 
 ### `memofy.memoize(fn, deps?, context?, options?)`
 
-Returns a memoized copy of `fn` with the same signature.
+Returns a memoized copy of `fn` with the same call signature.
 
 ```ts
-const memoized = memofy.memoize(fn, deps, context, options);
-
-memoized.size; // number of cached results
-memoized.clear(); // drop this function's cache
+memoize<F extends AnyFunction>(
+  fn: F,
+  deps?: Dependencies,
+  context?: ThisParameterType<F>,
+  options?: MemoizeOptions<F>
+): Memoized<F>
 ```
 
-`options` accepts `maxSize`, `ttl` and `cacheRejectedPromises` (overriding the
-instance defaults) plus:
+| Parameter | Type                                      | Description                                                                 |
+| --------- | ----------------------------------------- | --------------------------------------------------------------------------- |
+| `fn`      | `F`                                       | The function to memoize.                                                     |
+| `deps`    | `unknown[] \| (() => unknown[])`          | Invalidate the cache when these change. See [Dependencies](#dependencies).   |
+| `context` | `ThisParameterType<F>`                    | Bound as `this`. See [Context and `this`](#context-and-this).                |
+| `options` | `MemoizeOptions<F>`                       | Per-function overrides.                                                      |
 
-| Option     | Type                            | Description                                                                     |
-| ---------- | ------------------------------- | ------------------------------------------------------------------------------- |
-| `resolver` | `(...args) => string`           | Builds the cache key yourself. Useful when a cheap discriminator already exists. |
+`options` accepts `maxSize`, `ttl` and `cacheRejectedPromises` — overriding the
+instance defaults — plus:
 
-### `memofy.clear()`
+| Option     | Type                              | Description                                                                       |
+| ---------- | --------------------------------- | --------------------------------------------------------------------------------- |
+| `resolver` | `(...args: Parameters<F>) => string` | Build the cache key yourself. See [Custom keys](#custom-keys-with-resolver).   |
 
-Drops the caches of every function memoized by this instance.
+Each call to `memoize` creates its **own** cache. Memoizing the same function
+twice gives two independent caches:
 
-## Dependencies
+```js
+const a = memofy.memoize(fn);
+const b = memofy.memoize(fn);
+a(1); // runs
+b(1); // runs again — separate caches
+```
+
+---
+
+### `memofy.clear()` / `memofy.init()`
+
+```ts
+clear(): void
+init(): void
+```
+
+`clear()` empties the caches of every function memoized by this instance.
+`init()` does the same and re-publishes `window.__memofy__` when `trace` is on;
+calling it is optional, since the constructor already runs it.
+
+```js
+memofy.clear(); // every memoized function starts cold again
+```
+
+Caches are held inside each memoized function's closure, so `clear()` runs in
+constant time regardless of how many functions exist, and a memoized function
+that goes out of scope takes its cache with it — nothing keeps it alive.
+
+---
+
+### The memoized function
+
+The returned function keeps `fn`'s parameters and return type, and adds two
+members:
+
+```ts
+type Memoized<F> = OmitThisParameter<F> & {
+  clear: () => void;
+  readonly size: number;
+};
+```
+
+```js
+const double = memofy.memoize((n) => n * 2);
+
+double(1);
+double(2);
+double(1);
+
+double.size; // 2 — distinct argument sets cached
+double.clear(); // drop just this function's cache
+double.size; // 0
+```
+
+`this` is removed from the signature because the `context` you pass to
+`memoize` is already bound — callers invoke it as a plain function.
+
+---
+
+### `createKey(args)`
+
+The key builder is exported for testing, debugging, or writing a `resolver` on
+top of it.
+
+```ts
+createKey(args: ArrayLike<unknown>): string
+```
+
+```js
+import { createKey } from "@ahmetilhn/memofy";
+
+createKey([1, "a"]) === createKey([1, "a"]); // true
+createKey([{ a: 1, b: 2 }]) === createKey([{ b: 2, a: 1 }]); // true — order-free
+createKey([1]) === createKey(["1"]); // false — type-tagged
+```
+
+Throws a `RangeError` if the arguments nest deeper than 500 levels.
+
+---
+
+### Exported types
+
+```ts
+import type {
+  AnyFunction,
+  Dependencies,
+  Memoized,
+  MemoizeOptions,
+  MemofyParams,
+} from "@ahmetilhn/memofy";
+```
+
+---
+
+## Guides
+
+### Dependencies
 
 Pass `deps` to invalidate the cache when something outside the arguments
 changes — the same idea as React's `useMemo`.
@@ -107,9 +281,10 @@ changes — the same idea as React's `useMemo`.
 ```js
 const settings = { taxRate: 0.2 };
 
-const total = memofy.memoize((price) => price * (1 + settings.taxRate), [
-  settings,
-]);
+const total = memofy.memoize(
+  (price) => price * (1 + settings.taxRate),
+  [settings]
+);
 
 total(100); // 120 — runs
 total(100); // 120 — cached
@@ -118,37 +293,77 @@ settings.taxRate = 0.1;
 total(100); // 110 — dependency changed, so it runs again
 ```
 
-An array of dependencies is captured once, which means it can only observe
-mutations **inside** the values it holds. To track a rebindable primitive, pass
-a getter instead:
+A dependency change clears the **whole** cache for that function, not just the
+current arguments.
+
+**Array form vs getter form.** An array is captured once, so it can only observe
+mutations *inside* the values it holds. To track a rebindable primitive, pass a
+getter — it is re-read on every call:
 
 ```js
 let taxRate = 0.2;
 
-// Wrong: `taxRate` was copied into the array and can never change.
+// Wrong: taxRate was copied into the array and can never change.
 memofy.memoize(fn, [taxRate]);
 
 // Right: re-read on every call.
 memofy.memoize(fn, () => [taxRate]);
 ```
 
-## Context
+Dependencies are compared with the same structural rules as arguments, so
+objects, `Map`s and `Date`s all work.
 
-The third parameter binds `this`. Each call to `memoize` gets its own cache, so
-two contexts never share results.
+---
+
+### Context and `this`
+
+The third parameter binds `this`. Each `memoize` call has its own cache, so two
+contexts never share results.
+
+```js
+function greet() {
+  return `hi ${this.name}`;
+}
+
+const greetAda = memofy.memoize(greet, [], { name: "Ada" });
+const greetGrace = memofy.memoize(greet, [], { name: "Grace" });
+
+greetAda(); // "hi Ada"
+greetGrace(); // "hi Grace"
+```
+
+For class instances, memoize in the constructor so each instance gets its own
+cache:
 
 ```js
 class Cart {
   constructor(items) {
     this.items = items;
-    this.total = memofy.memoize(function () {
-      return this.items.reduce((sum, item) => sum + item.price, 0);
-    }, [], this);
+    this.total = memofy.memoize(
+      function () {
+        return this.items.reduce((sum, item) => sum + item.price, 0);
+      },
+      [this.items],
+      this
+    );
   }
 }
 ```
 
-## Async functions
+TypeScript checks the context against the function's `this` parameter:
+
+```ts
+function greet(this: { name: string }): string {
+  return this.name;
+}
+
+memofy.memoize(greet, [], { name: "Ada" }); // ok
+memofy.memoize(greet, [], { wrong: true }); // compile error
+```
+
+---
+
+### Async functions
 
 A promise is cached like any other value, so concurrent calls with the same
 arguments share one in-flight request.
@@ -162,8 +377,96 @@ const loadUser = memofy.memoize(async (id) => {
 await Promise.all([loadUser(1), loadUser(1)]); // one request
 ```
 
-Rejected promises are evicted once they settle, so a transient failure does not
-poison that argument set. Set `cacheRejectedPromises: true` to keep them.
+**Rejected promises are evicted once they settle**, so a transient failure does
+not poison that argument set for the process lifetime:
+
+```js
+await loadUser(1); // network error → rejects, entry removed
+await loadUser(1); // tries again
+```
+
+Set `cacheRejectedPromises: true` to keep failures cached — useful when the
+failure is deterministic and retrying is pointless.
+
+Note that attaching the eviction handler marks the promise as handled, so an
+unawaited rejection will not raise an unhandled-rejection warning from memofy's
+side. Handle the promise you receive as you normally would.
+
+---
+
+### Cache size and expiry
+
+Every memoized function gets a bounded LRU cache — 1000 entries by default.
+Reading an entry marks it most-recently-used, so hot entries survive.
+
+```js
+const run = memofy.memoize(fn, [], undefined, { maxSize: 50 });
+
+for (let i = 0; i < 10_000; i++) run(i);
+run.size; // 50
+```
+
+Opt out with `maxSize: 0` (or `Infinity`) when you know the input space is small
+and bounded:
+
+```js
+const memofy = new Memofy({ maxSize: 0 });
+```
+
+`ttl` expires entries by age. Expiry is evaluated lazily on read — memofy never
+schedules a timer, so it cannot keep a Node process alive or leak handles:
+
+```js
+const rates = memofy.memoize(fetchRates, [], undefined, { ttl: 60_000 });
+```
+
+---
+
+### Custom keys with `resolver`
+
+When a cheap discriminator already exists, skip structural serialisation
+entirely:
+
+```js
+const render = memofy.memoize(
+  (user) => expensiveTemplate(user),
+  [],
+  undefined,
+  { resolver: (user) => `${user.id}:${user.updatedAt}` }
+);
+```
+
+This is worth reaching for when:
+
+- arguments are large (serialising a 100-element array costs ~3 µs),
+- arguments contain getters with side effects,
+- only part of the argument actually affects the result.
+
+The resolver runs with the same `context` as the function, and TypeScript types
+its parameters from `fn`.
+
+---
+
+### Debugging
+
+`hasLogs` logs every cache hit:
+
+```js
+const memofy = new Memofy({ hasLogs: true });
+// memofy: "getTotal" returned a cached value. 42
+```
+
+`trace` exposes the instance in browsers so you can inspect or clear from the
+console:
+
+```js
+new Memofy({ trace: true });
+// window.__memofy__.clear()
+```
+
+Both are no-ops outside the browser, so leaving `trace` on will not break SSR.
+
+---
 
 ## Framework integration
 
@@ -177,7 +480,9 @@ Create the instance once, outside the component, and memoize outside render.
 import Memofy from "@ahmetilhn/memofy";
 
 const memofy = new Memofy();
-const formatRows = memofy.memoize((rows, locale) => expensiveFormat(rows, locale));
+const formatRows = memofy.memoize((rows, locale) =>
+  expensiveFormat(rows, locale)
+);
 
 function Table({ rows, locale }) {
   return <tbody>{formatRows(rows, locale).map(renderRow)}</tbody>;
@@ -185,18 +490,30 @@ function Table({ rows, locale }) {
 ```
 
 Unlike `useMemo`, the cache survives unmounts and is shared across components,
-which is the point when the same inputs recur.
+which is the point when the same inputs recur. Use `useMemo` for per-component
+values tied to a render; use memofy for pure computations shared app-wide.
 
-### Vue / Nuxt (client-side)
+### Vue / Nuxt (client side)
 
 ```js
 // composables/useFormatter.js
 import Memofy from "@ahmetilhn/memofy";
 
 const memofy = new Memofy();
+
 export const formatPrice = memofy.memoize((cents, currency) =>
   new Intl.NumberFormat(currency).format(cents / 100)
 );
+```
+
+### Svelte
+
+```js
+// lib/search.js
+import Memofy from "@ahmetilhn/memofy";
+
+const memofy = new Memofy({ maxSize: 200 });
+export const search = memofy.memoize((query, items) => rank(query, items));
 ```
 
 ### SSR: Nuxt, Next, and any Node server
@@ -211,7 +528,9 @@ For per-user work, create an instance per request:
 // Next.js route handler
 export async function GET(request) {
   const memofy = new Memofy(); // isolated to this request
-  const loadOrders = memofy.memoize((userId) => db.orders.findMany({ userId }));
+  const loadOrders = memofy.memoize((userId) =>
+    db.orders.findMany({ userId })
+  );
 
   return Response.json(await loadOrders(getUserId(request)));
 }
@@ -242,21 +561,25 @@ and set a `ttl` so entries do not go stale.
 </script>
 ```
 
+---
+
 ## How arguments are compared
 
 Arguments are serialised into a type-tagged structural key, which is what makes
 lookups constant-time and comparisons predictable:
 
-| Input                                   | Behaviour                                            |
-| --------------------------------------- | ---------------------------------------------------- |
-| Primitives                               | `Object.is` semantics — `NaN` matches, `0 !== -0`     |
-| Plain objects, arrays                    | Compared by content; key order does not matter        |
-| `Date`, `RegExp`, `Map`, `Set`, `Error`  | Compared by value                                     |
-| `URL`, `URLSearchParams`                 | Compared by their string form                         |
-| Typed arrays, `ArrayBuffer`, `DataView`  | Compared byte by byte                                 |
-| Class instances                          | Compared by prototype **and** own fields              |
-| Functions, `WeakMap`, `Promise`, DOM nodes | Compared by reference — they expose no structure     |
-| Circular references                      | Handled                                               |
+| Input                                      | Behaviour                                          |
+| ------------------------------------------- | -------------------------------------------------- |
+| Primitives                                  | `Object.is` semantics — `NaN` matches, `0 ≠ -0`     |
+| Plain objects, arrays                       | By content; key order does not matter               |
+| `Date`, `RegExp`, `Map`, `Set`, `Error`     | By value; `Map`/`Set` ignore insertion order        |
+| `URL`, `URLSearchParams`                    | By their string form                                |
+| Typed arrays, `ArrayBuffer`, `DataView`     | Byte by byte                                        |
+| Class instances                             | By prototype **and** own fields                     |
+| Functions, `WeakMap`, `Promise`, DOM nodes  | By reference — they expose no structure             |
+| Circular references                         | Handled                                             |
+
+Only own enumerable properties participate, including symbol keys.
 
 Two caveats worth knowing:
 
@@ -265,11 +588,13 @@ Two caveats worth knowing:
   memofy calls the original function directly. You lose caching, never
   correctness.
 
-Both are avoidable with a `resolver`.
+Both are avoidable with a [`resolver`](#custom-keys-with-resolver).
+
+---
 
 ## Performance
 
-`node scripts/bench.mjs` on Node 22, Apple Silicon:
+`node scripts/bench.mjs` on Node 24, Apple Silicon:
 
 | Benchmark                              | Result         |
 | -------------------------------------- | -------------- |
@@ -282,37 +607,94 @@ Both are avoidable with a `resolver`.
 | Key building, small object             | 0.51 µs        |
 | Key building, array of 100 numbers     | 3.18 µs        |
 
-Cache hit cost does not grow with cache size. Memoize functions that cost more
-than roughly a microsecond; below that, the key building dominates.
+Cache hit cost does not grow with cache size. Recency is tracked with a
+doubly-linked list rather than by re-inserting into a `Map`: V8 rehashes an
+ordered hash map on deletion, so the obvious `delete` + `set` promotion costs
+~20 µs per read on a 10k-entry cache, while relinking two pointers stays flat.
+
+Memoize functions that cost more than roughly a microsecond; below that, key
+building dominates.
+
+---
 
 ## Bundle size
 
 | Build          | Raw     | Gzip    | Brotli  |
 | -------------- | ------- | ------- | ------- |
-| UMD (minified) | 5.62 KB | 2.22 KB | 2.03 KB |
+| UMD (minified) | 5.63 KB | 2.23 KB | 2.03 KB |
 
 ESM and CommonJS builds ship unminified with source maps for your bundler to
-process. The package is side-effect free and fully tree-shakeable.
+process. The package is side-effect free and fully tree-shakeable — importing
+without using it leaves nothing behind.
+
+Entry points:
+
+| Consumer               | File               |
+| ---------------------- | ------------------ |
+| ESM / bundlers         | `build/index.mjs`  |
+| CommonJS               | `build/index.cjs`  |
+| `<script>` / CDN       | `build/index.umd.js` (global `memofy`) |
+| TypeScript             | `build/index.d.ts` |
+
+---
+
+## FAQ and troubleshooting
+
+**My function still runs every time.**
+Most often the arguments differ in a way you did not expect — a fresh callback
+or a `Date` created per call. `createKey([...args])` on two calls tells you
+immediately whether they key the same. A `deps` getter returning a new object
+every call has the same effect.
+
+**Two different inputs return the same result.**
+That should not happen. Every type is tagged and every payload length-prefixed
+precisely to avoid collisions. If you find one, it is a bug worth reporting.
+
+**Can I memoize a method and keep `this`?**
+Yes — pass the instance as the third argument. See
+[Context and `this`](#context-and-this).
+
+**Does the cache leak memory?**
+No. Every cache is bounded (1000 entries by default), holds no timers, and lives
+in the memoized function's closure, so dropping the function drops the cache.
+Passing `maxSize: 0` opts into an unbounded cache; that one is on you.
+
+**Can I share a cache between two memoized functions?**
+No, by design — that was the source of several v2 bugs. Memoize once and share
+the returned function.
+
+**Does it work with recursion?**
+Yes, if the recursive call goes through the memoized name:
+
+```js
+const fib = memofy.memoize((n) => (n < 2 ? n : fib(n - 1) + fib(n - 2)));
+```
+
+**Is it safe in SSR?**
+Yes, provided you scope instances correctly. See
+[SSR](#ssr-nuxt-next-and-any-node-server).
+
+---
 
 ## Migrating from v2
 
 v2 had defects that made memoization silently incorrect. The fixes change
 observable behaviour, hence the major version.
 
-| Behaviour                             | v2                                      | v3                            |
-| ------------------------------------- | --------------------------------------- | ----------------------------- |
-| Falsy results (`0`, `""`, `false`)    | Never cached, re-inserted on every call | Cached                        |
-| Zero-argument functions               | Never cached                            | Cached                        |
-| `context`                             | Not part of the key; contexts collided  | Each `memoize` has own cache  |
-| Dependency change                     | Fresh value once, then stale forever    | Always fresh                  |
-| `URL`, `Map`, `Set`, `RegExp` args    | All collided into one entry             | Compared by value             |
-| `NaN` argument                        | Never hit, grew the cache               | Cached                        |
-| Circular argument                     | Threw `RangeError`                      | Handled                       |
-| Rejected promises                     | Cached forever                          | Evicted once settled          |
-| Cache size                            | Unbounded                               | LRU, 1000 per function        |
-| Lookup cost                           | O(n) deep-equality scan                 | O(1)                          |
-| `@ahmetilhn/handy-utils`              | Required peer dependency                | Removed                       |
-| Minimum Node.js                       | Unspecified                             | 24                            |
+| Behaviour                          | v2                                      | v3                           |
+| ---------------------------------- | --------------------------------------- | ---------------------------- |
+| Falsy results (`0`, `""`, `false`) | Never cached, re-inserted on every call | Cached                       |
+| Zero-argument functions            | Never cached                            | Cached                       |
+| `context`                          | Not part of the key; contexts collided  | Each `memoize` has own cache |
+| Dependency change                  | Fresh value once, then stale forever    | Always fresh                 |
+| `URL`, `Map`, `Set`, `RegExp` args | All collided into one entry             | Compared by value            |
+| `NaN` argument                     | Never hit, grew the cache               | Cached                       |
+| Circular argument                  | Threw `RangeError`                      | Handled                      |
+| Rejected promises                  | Cached forever                          | Evicted once settled         |
+| Cache size                         | Unbounded                               | LRU, 1000 per function       |
+| Lookup cost                        | O(n) deep-equality scan                 | O(1)                         |
+| `@ahmetilhn/handy-utils`           | Required peer dependency                | Removed                      |
+| Minimum Node.js                    | Unspecified                             | 24                           |
 
 Required code changes:
 
@@ -329,14 +711,17 @@ Required code changes:
 - If you depended on primitive `deps` never invalidating, that was a bug; use
   the getter form to track them.
 
+---
+
 ## Contributing
 
 ```bash
 npm install
 npm run verify   # typecheck, test with coverage, build, bundle-size budget
+npm run bench    # performance numbers
 ```
 
-The suite enforces 100% statement, branch, function and line coverage.
+182 tests, enforced at 100% for statements, branches, functions and lines.
 
 ## Releasing
 

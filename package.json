@@ -1,6 +1,6 @@
 {
   "name": "@ahmetilhn/memofy",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "Fast, dependency-free memoization for JavaScript and TypeScript functions, with dependency tracking, LRU eviction and TTL.",
   "main": "./build/index.cjs",
   "module": "./build/index.mjs",
