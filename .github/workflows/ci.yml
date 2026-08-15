@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Node 24 is the supported floor, declared in package.json engines.
+        node-version: [24.x]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - run: npm ci
+
+      - name: Type-check
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Bundle size budget
+        run: npm run size
+
+      - name: Verify the published package works
+        run: |
+          npm pack
+          cd "$(mktemp -d)"
+          npm init -y >/dev/null
+          npm install "$GITHUB_WORKSPACE"/ahmetilhn-memofy-*.tgz
+
+          cat > esm.mjs <<'EOF'
+          import Memofy from "@ahmetilhn/memofy";
+          const memoized = new Memofy().memoize((n) => n * 2);
+          if (memoized(2) !== 4) throw new Error("ESM entry is broken");
+          console.log("ESM entry OK");
+          EOF
+
+          cat > cjs.cjs <<'EOF'
+          const { Memofy } = require("@ahmetilhn/memofy");
+          const memoized = new Memofy().memoize((n) => n * 2);
+          if (memoized(2) !== 4) throw new Error("CJS entry is broken");
+          console.log("CJS entry OK");
+          EOF
+
+          node esm.mjs
+          node cjs.cjs

@@ -1,1 +1,4 @@
-rollup -c -w --environment INCLUDE_DEPS,BUILD:development
+#!/bin/sh
+set -e
+
+rollup -c -w

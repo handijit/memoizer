@@ -1,11 +1,10 @@
-declare namespace NodeJS {
-  interface Global {
-    user: {
-      name: string;
-    };
+import type Memofy from "./lib/index";
+
+declare global {
+  interface Window {
+    /** Present only when a Memofy instance was created with `trace: true`. */
+    __memofy__?: Memofy;
   }
 }
 
-interface Window {
-  __memofy__: { functions: WeakMap; dependencies: WeakMap };
-}
+export {};

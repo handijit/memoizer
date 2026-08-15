@@ -1,10 +1,39 @@
-import { writeToConsole } from "./../lib/helpers/logger";
-describe("logger tests", () => {
-  test("it should write log to console", () => {
-    jest.spyOn(console, "info").mockImplementation(jest.fn());
-    writeToConsole("exampleMethod", "hello world!");
-    expect(console.info).toHaveBeenCalledWith(
-      "exampleMethod function value returned from memofy cache. Value: hello world!"
+import { writeToConsole } from "../lib/helpers/logger";
+
+describe("writeToConsole", () => {
+  test("should report the function name and pass the value separately", () => {
+    const info = jest.spyOn(console, "info").mockImplementation(() => undefined);
+
+    writeToConsole("getTotal", 42);
+
+    // The value is a separate argument, never interpolated: a template literal
+    // would stringify large cached results on every cache hit.
+    expect(info).toHaveBeenCalledWith(
+      'memofy: "getTotal" returned a cached value.',
+      42
     );
+  });
+
+  test("should fall back to a placeholder for unnamed functions", () => {
+    const info = jest.spyOn(console, "info").mockImplementation(() => undefined);
+
+    writeToConsole("", null);
+
+    expect(info).toHaveBeenCalledWith(
+      'memofy: "anonymous" returned a cached value.',
+      null
+    );
+  });
+
+  test("should not stringify the value", () => {
+    const info = jest.spyOn(console, "info").mockImplementation(() => undefined);
+    const value = {
+      toString(): string {
+        throw new Error("must not be stringified");
+      },
+    };
+
+    expect(() => writeToConsole("fn", value)).not.toThrow();
+    expect(info).toHaveBeenCalledWith(expect.any(String), value);
   });
 });

@@ -1,31 +1,154 @@
-import Memofy from "../lib";
+import Memofy from "../lib/index";
 
-describe("deps tests", () => {
-  const { memoize } = new Memofy();
+describe("dependencies", () => {
+  let memofy: Memofy;
 
-  const product = {
-    price: 10,
-  };
-  const getPrice = jest.fn((taxRatio: number = 10) => product.price * taxRatio);
-  const _getPrice = memoize(getPrice, [product]);
   beforeEach(() => {
-    _getPrice(10);
-  });
-  test("should return from cache", () => {
-    expect(_getPrice(10)).toBe(100);
-    expect(_getPrice(10)).toBe(100);
-    expect(_getPrice(10)).toBe(100);
-    expect(_getPrice(10)).toBe(100);
-    expect(getPrice).toHaveBeenCalledTimes(1);
+    memofy = new Memofy();
   });
 
-  test("should get from new calculating", () => {
-    product.price = 20;
-    expect(_getPrice()).toBe(200);
-    expect(getPrice).toHaveBeenCalledTimes(1);
+  describe("array form", () => {
+    test("should reuse the cache while dependencies are unchanged", () => {
+      const settings = { rate: 2 };
+      const spy = jest.fn((price: number) => price * settings.rate);
+      const total = memofy.memoize(spy, [settings]);
 
-    product.price = 100;
-    expect(_getPrice()).toBe(1000);
-    expect(getPrice).toHaveBeenCalledTimes(2);
+      expect(total(10)).toBe(20);
+      expect(total(10)).toBe(20);
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+
+    test("should re-run when a dependency object mutates", () => {
+      const settings = { rate: 2 };
+      const spy = jest.fn((price: number) => price * settings.rate);
+      const total = memofy.memoize(spy, [settings]);
+
+      expect(total(10)).toBe(20);
+      settings.rate = 3;
+      expect(total(10)).toBe(30);
+      expect(spy).toHaveBeenCalledTimes(2);
+    });
+
+    test("should return the fresh value on every later call, not the stale one", () => {
+      // The v2 store appended a second entry for the same arguments and then
+      // kept returning the first match, so a dependency change was visible
+      // exactly once before reverting.
+      const settings = { rate: 2 };
+      const total = memofy.memoize(
+        (price: number) => price * settings.rate,
+        [settings]
+      );
+
+      expect(total(10)).toBe(20);
+      settings.rate = 3;
+      expect(total(10)).toBe(30);
+      expect(total(10)).toBe(30);
+      expect(total(10)).toBe(30);
+    });
+
+    test("should drop the whole cache when dependencies change", () => {
+      const settings = { rate: 2 };
+      const spy = jest.fn((price: number) => price * settings.rate);
+      const total = memofy.memoize(spy, [settings]);
+
+      total(10);
+      total(20);
+      expect(spy).toHaveBeenCalledTimes(2);
+
+      settings.rate = 3;
+      expect(total(10)).toBe(30);
+      expect(total(20)).toBe(60);
+      expect(spy).toHaveBeenCalledTimes(4);
+    });
+
+    test("should react to a mutated array dependency", () => {
+      const items: number[] = [1];
+      const spy = jest.fn(() => items.length);
+      const count = memofy.memoize(spy, [items]);
+
+      expect(count()).toBe(1);
+      items.push(2);
+      expect(count()).toBe(2);
+      expect(spy).toHaveBeenCalledTimes(2);
+    });
+
+    test("should track several dependencies", () => {
+      const a = { v: 1 };
+      const b = { v: 1 };
+      const spy = jest.fn(() => a.v + b.v);
+      const sum = memofy.memoize(spy, [a, b]);
+
+      expect(sum()).toBe(2);
+      b.v = 5;
+      expect(sum()).toBe(6);
+      expect(spy).toHaveBeenCalledTimes(2);
+    });
+
+    test("should not invalidate on the first observation", () => {
+      const settings = { rate: 2 };
+      const spy = jest.fn((price: number) => price * settings.rate);
+      const total = memofy.memoize(spy, [settings]);
+
+      total(10);
+      total(10);
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+
+    test("should behave like a plain memoize when deps are empty", () => {
+      const spy = jest.fn((n: number) => n);
+      const run = memofy.memoize(spy, []);
+
+      run(1);
+      run(1);
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("getter form", () => {
+    test("should observe primitive dependencies changing", () => {
+      // A captured array can never see a rebound primitive; a getter can.
+      let rate = 2;
+      const spy = jest.fn((price: number) => price * rate);
+      const total = memofy.memoize(spy, () => [rate]);
+
+      expect(total(10)).toBe(20);
+      expect(total(10)).toBe(20);
+      expect(spy).toHaveBeenCalledTimes(1);
+
+      rate = 3;
+      expect(total(10)).toBe(30);
+      expect(spy).toHaveBeenCalledTimes(2);
+    });
+
+    test("should keep the cache while the getter returns equal values", () => {
+      let rate = 2;
+      const spy = jest.fn((price: number) => price * rate);
+      const total = memofy.memoize(spy, () => [rate]);
+
+      total(10);
+      rate = 2;
+      total(10);
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+
+    test("should support an empty getter result", () => {
+      const spy = jest.fn((n: number) => n);
+      const run = memofy.memoize(spy, () => []);
+
+      run(1);
+      run(1);
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+
+    test("should fall back to an uncached call when the getter throws", () => {
+      const spy = jest.fn((n: number) => n);
+      const run = memofy.memoize(spy, () => {
+        throw new Error("deps exploded");
+      });
+
+      expect(run(1)).toBe(1);
+      expect(run(1)).toBe(1);
+      expect(spy).toHaveBeenCalledTimes(2);
+    });
   });
 });

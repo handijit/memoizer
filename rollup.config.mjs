@@ -1,30 +1,52 @@
-import babel from "@rollup/plugin-babel";
-import terser from "@rollup/plugin-terser";
 import typescript from "@rollup/plugin-typescript";
+import terser from "@rollup/plugin-terser";
 import { dts } from "rollup-plugin-dts";
+
+const input = "./lib/index.ts";
+
+// TypeScript alone handles downlevelling to the tsconfig target, which keeps
+// browser output deterministic. Running babel here previously merged the root
+// babel.config.js (targets: node current), so the published browser bundle was
+// compiled for whichever Node version happened to build it.
+const ts = () =>
+  typescript({
+    tsconfig: "./tsconfig.json",
+    exclude: ["__tests__/**"],
+  });
+
 export default [
   {
-    input: "./lib/index.ts",
-    output: {
-      file: "./build/index.js",
-      format: "umd",
-      name: "memofy",
-    },
-    plugins: [
-      typescript({
-        tsconfig: "./tsconfig.json",
-      }),
-      babel({
-        babelHelpers: "bundled",
-        exclude: "node_modules/**",
-        presets: ["@babel/preset-env"],
-      }),
-      terser(),
+    input,
+    output: [
+      {
+        file: "./build/index.mjs",
+        format: "es",
+        sourcemap: true,
+      },
+      {
+        file: "./build/index.cjs",
+        format: "cjs",
+        exports: "named",
+        sourcemap: true,
+      },
     ],
+    plugins: [ts()],
   },
   {
-    input: "./lib/index.ts",
-    output: [{ file: "./build/index.d.ts", format: "umd" }],
+    // Minified single file for <script> and CDN use.
+    input,
+    output: {
+      file: "./build/index.umd.js",
+      format: "umd",
+      name: "memofy",
+      exports: "named",
+      sourcemap: true,
+    },
+    plugins: [ts(), terser()],
+  },
+  {
+    input,
+    output: { file: "./build/index.d.ts", format: "es" },
     plugins: [dts({ tsconfig: "./tsconfig.json" })],
   },
 ];
