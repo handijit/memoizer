@@ -338,6 +338,22 @@ npm run verify   # typecheck, test with coverage, build, bundle-size budget
 
 The suite enforces 100% statement, branch, function and line coverage.
 
+## Releasing
+
+Releases are automatic. Bump `version` in `package.json` and merge to `master`:
+
+```bash
+npm version patch   # or minor / major
+git push origin master
+```
+
+The publish workflow then type-checks, tests, builds, checks the bundle-size
+budget, installs the packed tarball into a clean project to confirm both entry
+points work, publishes to npm with provenance, and pushes a `v<version>` tag.
+
+A commit that does not change the version is not an error — the workflow sees
+the version already on npm and skips the release.
+
 ## License
 
 MIT © [Ahmet ilhan](https://github.com/ahmetilhn)
