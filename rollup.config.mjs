@@ -4,10 +4,8 @@ import { dts } from "rollup-plugin-dts";
 
 const input = "./lib/index.ts";
 
-// TypeScript alone handles downlevelling to the tsconfig target, which keeps
-// browser output deterministic. Running babel here previously merged the root
-// babel.config.js (targets: node current), so the published browser bundle was
-// compiled for whichever Node version happened to build it.
+// TypeScript alone handles downlevelling to the tsconfig target, which keeps browser output
+// deterministic.
 const ts = () =>
   typescript({
     tsconfig: "./tsconfig.json",

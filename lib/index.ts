@@ -38,12 +38,7 @@ class Memofy {
   private readonly ttl: number;
   private readonly cacheRejectedPromises: boolean;
 
-  /**
-   * Bumped by `clear()`. Each memoized function compares it against its own
-   * copy and empties its cache on the next call, which lets one instance-wide
-   * clear run in O(1) without holding a reference to every cache — the caches
-   * live in their closures and are collected with the functions that own them.
-   */
+  /** Bumped by `clear()`. */
   private generation = 0;
 
   constructor(params: MemofyParams = {}) {
@@ -56,10 +51,7 @@ class Memofy {
     this.init();
   }
 
-  /**
-   * Resets the instance. Calling it is optional — the constructor already does
-   * it — but it stays available so a long-lived instance can be recycled.
-   */
+  /** Resets the instance. */
   init = (): void => {
     this.clear();
 
@@ -117,15 +109,12 @@ class Memofy {
           ? resolver.apply(context, args)
           : createKey(args as unknown[]);
       } catch {
-        // Key building can fail on hostile input — a throwing getter, a Proxy
-        // that traps ownKeys. Falling back to a plain call keeps the memoized
-        // function a faithful stand-in for the original instead of turning a
-        // caching detail into the caller's exception.
+        // Key building can fail on hostile input — a throwing getter, a Proxy that traps ownKeys.
         return functionToMemoize.apply(context, args) as ReturnType<F>;
       }
 
-      // A single lookup decides hit or miss; the sentinel keeps a cached
-      // `undefined` distinguishable from an absent entry.
+      // A single lookup decides hit or miss; the sentinel keeps a cached `undefined`
+      // distinguishable from an absent entry.
       const cached = cache.read(key);
       if (cached !== MISS) {
         if (this.hasLogs) writeToConsole(functionToMemoize.name, cached);
@@ -137,10 +126,8 @@ class Memofy {
 
       if (!cacheRejectedPromises && isThenable(result)) {
         const rejectedKey = key;
-        // Wrapping in `Promise.resolve` keeps this safe for non-conforming
-        // thenables, which may not tolerate an `undefined` onFulfilled.
-        // A settled rejection evicts the entry so a transient failure does not
-        // poison the argument set for the process lifetime.
+        // Wrapping in `Promise.resolve` keeps this safe for non-conforming thenables, which may not
+        // tolerate an `undefined` onFulfilled.
         Promise.resolve(result).then(undefined, () => {
           cache.delete(rejectedKey);
         });
@@ -149,8 +136,8 @@ class Memofy {
       return result;
     };
 
-    // `run` implements F's call signature; the cast adds the cache controls
-    // that are attached immediately below.
+    // `run` implements F's call signature; the cast adds the cache controls that are attached
+    // immediately below.
     const memoized = run as unknown as Memoized<F>;
 
     memoized.clear = (): void => {

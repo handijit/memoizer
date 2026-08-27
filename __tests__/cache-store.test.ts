@@ -96,7 +96,7 @@ describe("CacheStore", () => {
       store.set("a", 1);
       store.set("b", 2);
 
-      store.read("a"); // "a" becomes most recently used
+      store.read("a");
       store.set("c", 3);
 
       expect(store.read("a")).toBe(1);
@@ -123,7 +123,6 @@ describe("CacheStore", () => {
 
       store.read("a");
       store.read("b");
-      // Recency is now c < a < b.
 
       store.set("d", 4);
       expect(store.read("c")).toBe(MISS);
@@ -149,14 +148,14 @@ describe("CacheStore", () => {
       store.set("b", 2);
       store.set("c", 3);
 
-      store.delete("a"); // head
-      store.delete("c"); // tail
+      store.delete("a");
+      store.delete("c");
       expect(store.size).toBe(1);
       expect(store.read("b")).toBe(2);
 
       store.set("d", 4);
       store.set("e", 5);
-      store.delete("d"); // middle
+      store.delete("d");
       expect(store.read("b")).toBe(2);
       expect(store.read("e")).toBe(5);
       expect(store.size).toBe(2);
@@ -244,7 +243,7 @@ describe("CacheStore", () => {
       store.set("b", 2);
       store.set("c", 3);
 
-      jest.advanceTimersByTime(500); // only "a" has expired
+      jest.advanceTimersByTime(500);
       expect(store.read("a")).toBe(MISS);
       expect(store.read("b")).toBe(2);
       expect(store.read("c")).toBe(3);
@@ -265,7 +264,6 @@ describe("CacheStore", () => {
       const store = new CacheStore(UNBOUNDED, 1000);
       store.set("a", 1);
 
-      // A library that scheduled expiry timers would keep a Node process alive.
       expect(jest.getTimerCount()).toBe(0);
       expect(store.size).toBe(1);
     });
@@ -278,7 +276,6 @@ describe("CacheStore", () => {
       for (let i = 0; i < 1000; i++) store.set(`k${i}`, i);
       expect(store.size).toBe(100);
 
-      // Only the last 100 inserts survive.
       for (let i = 0; i < 900; i++) expect(store.read(`k${i}`)).toBe(MISS);
       for (let i = 900; i < 1000; i++) expect(store.read(`k${i}`)).toBe(i);
     });

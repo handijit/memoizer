@@ -17,8 +17,6 @@ describe("context binding", () => {
   });
 
   test("should not leak results between two contexts", () => {
-    // v2 keyed on the raw function reference, so a second memoization of the
-    // same function served the first context's results.
     function greet(this: { name: string }): string {
       return `hi ${this.name}`;
     }

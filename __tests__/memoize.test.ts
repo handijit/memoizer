@@ -84,7 +84,6 @@ describe("memoize", () => {
       product.price = 15;
       expect(total(product)).toBe(30);
       product.price = 10;
-      // The original entry must still be intact and reused.
       expect(total(product)).toBe(20);
       expect(spy).toHaveBeenCalledTimes(2);
     });
@@ -180,7 +179,6 @@ describe("memoize", () => {
 
       expect(run(hostile)).toBe("ok");
       expect(run(hostile)).toBe("ok");
-      // Correct results, just no caching.
       expect(spy).toHaveBeenCalledTimes(2);
     });
 
@@ -422,7 +420,6 @@ describe("memoize", () => {
       });
 
       expect(read({ id: 1, seenAt: 100 })).toBe(1);
-      // Same id, different `seenAt`: the resolver ignores the noisy field.
       expect(read({ id: 1, seenAt: 999 })).toBe(1);
       expect(spy).toHaveBeenCalledTimes(1);
 

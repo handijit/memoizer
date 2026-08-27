@@ -10,7 +10,6 @@ describe("identity registry", () => {
     });
 
     test("should report true on engines accepting symbol weak keys", () => {
-      // Node 20+ / V8 10.8+ implement the ES2023 behaviour.
       expect(supportsWeakSymbolKeys()).toBe(true);
     });
 

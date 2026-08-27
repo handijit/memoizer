@@ -6,8 +6,6 @@ describe("writeToConsole", () => {
 
     writeToConsole("getTotal", 42);
 
-    // The value is a separate argument, never interpolated: a template literal
-    // would stringify large cached results on every cache hit.
     expect(info).toHaveBeenCalledWith(
       'memofy: "getTotal" returned a cached value.',
       42

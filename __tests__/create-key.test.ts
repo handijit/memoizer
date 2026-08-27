@@ -1,6 +1,5 @@
 import createKey from "../lib/utils/create-key";
 
-/** Asserts that no two of the given values share a cache key. */
 const expectAllDistinct = (values: unknown[]): void => {
   const byKey = new Map<string, unknown>();
 
@@ -406,8 +405,6 @@ describe("createKey", () => {
     });
 
     test("should fail deterministically past the depth guard", () => {
-      // A predictable RangeError beats an engine-dependent stack overflow;
-      // `memoize` turns it into an uncached call.
       expect(() => createKey([buildChain(5000)])).toThrow(RangeError);
       expect(() => createKey([buildChain(5000)])).toThrow(/nesting exceeded/);
     });

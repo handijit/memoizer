@@ -1,7 +1,6 @@
 import Memofy from "../lib/index";
 import type { Memoized } from "../lib/types";
 
-/** Compile-time assertion helpers — `npm run typecheck` is what enforces these. */
 type Equals<A, B> =
   (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2
     ? true
@@ -46,7 +45,6 @@ describe("type surface", () => {
     }
     const greetAda = memofy.memoize(greet, [], { name: "Ada" });
 
-    // Callers never supply `this`.
     expectType<string>()(greetAda("hi"));
 
     type Actual = typeof greetAda;

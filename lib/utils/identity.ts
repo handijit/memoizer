@@ -1,19 +1,13 @@
 /**
- * Stable identity numbering for values that carry no inspectable structure —
- * functions, weak collections, DOM nodes, unregistered symbols.
- *
- * Backed by weak references wherever the engine allows it, so an id never
- * outlives the value it describes.
+ * Stable identity numbering for values that carry no inspectable structure — functions, weak
+ * collections, DOM nodes, unregistered symbols.
  */
 export type IdentityRegistry = {
   ofObject: (val: object) => number;
   ofSymbol: (val: symbol) => number;
 };
 
-/**
- * Symbols became valid WeakMap keys in V8 10.8 / ES2023. Older engines throw,
- * and must fall back to a strong map.
- */
+/** Symbols became valid WeakMap keys in V8 10.8 / ES2023. */
 export const supportsWeakSymbolKeys = (): boolean => {
   try {
     new WeakMap().set(Symbol("memofy") as unknown as object, 1);

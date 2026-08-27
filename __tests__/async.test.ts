@@ -51,10 +51,8 @@ describe("promise results", () => {
     await expect(load(2)).resolves.toBe("user-2");
     await expect(load(2)).resolves.toBe("user-2");
 
-    // One rejected call plus one successful call that stayed cached.
     expect(spy).toHaveBeenCalledTimes(2);
 
-    // The rejected key was evicted, so it runs again.
     await expect(load(1)).rejects.toThrow("bad id");
     expect(spy).toHaveBeenCalledTimes(3);
   });
@@ -119,7 +117,6 @@ describe("promise results", () => {
     const load = memofy.memoize(spy);
 
     const first = load();
-    // Still in flight, so a second call must reuse the same promise.
     const second = load();
     expect(first).toBe(second);
 

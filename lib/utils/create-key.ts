@@ -1,25 +1,11 @@
 /**
- * Structural cache-key serialisation.
- *
- * Turns an argument list into a string that is stable across calls and
- * injective for every value memofy can distinguish, so lookups become a single
- * O(1) `Map.get` instead of a linear deep-equality scan.
- *
- * Two rules keep the output injective:
- *   1. every token starts with a type tag, so a number can never collide with
- *      the string that spells it;
- *   2. every variable-length payload is length-prefixed, so its content can
- *      never be mistaken for surrounding structure.
+ * Structural cache-key serialisation. Turns an argument list into a string that is stable across
+ * calls and injective for every value memofy can…
  */
 
 import { createIdentityRegistry } from "./identity";
 
-/**
- * Guards the recursive walk. Hitting this throws deterministically instead of
- * bottoming out the call stack at an engine-dependent depth; `memoize` catches
- * it and falls back to an uncached call, so an absurdly deep argument costs
- * caching rather than correctness.
- */
+/** Guards the recursive walk. */
 const MAX_DEPTH = 500;
 
 const TAG_UNDEFINED = "u";
@@ -61,8 +47,8 @@ const symbolToken = (val: symbol): string => {
 };
 
 const numberToken = (val: number): string =>
-  // `String(-0)` is "0", which would make `f(-0)` collide with `f(0)` even
-  // though they behave differently (1/-0 is -Infinity).
+  // `String(-0)` is "0", which would make `f(-0)` collide with `f(0)` even though they behave
+  // differently (1/-0 is -Infinity).
   Object.is(val, -0) ? "-0" : String(val);
 
 const bytesToken = (view: ArrayBufferView): string => {
@@ -101,8 +87,8 @@ const serialize = (
       out.push(TAG_SYMBOL + symbolToken(val));
       return;
     case "function":
-      // Behaviour depends on captured closure state, which is not observable,
-      // so identity is the only sound key.
+      // Behaviour depends on captured closure state, which is not observable, so identity is the
+      // only sound key.
       out.push(TAG_FUNCTION + identityOf(val));
       return;
   }
@@ -114,9 +100,7 @@ const serialize = (
 
   const obj = val as object;
 
-  // `path` holds the current ancestor chain only. Entries are removed on the
-  // way out so that shared (non-circular) references serialise identically to
-  // separate but structurally equal values, matching deep-equality semantics.
+  // `path` holds the current ancestor chain only.
   const ancestor = path.get(obj);
   if (ancestor !== undefined) {
     out.push(TAG_CYCLE + ancestor);
@@ -228,8 +212,8 @@ const serializeObject = (
   }
 
   if (tag !== "[object Object]" && tag !== "[object Arguments]") {
-    // Exotic built-ins and host objects (DOM nodes, Headers, Blob, ...) keep
-    // their state in internal slots, so there is nothing structural to read.
+    // Exotic built-ins and host objects (DOM nodes, Headers, Blob,...) keep their state in internal
+    // slots, so there is nothing structural to read.
     out.push(TAG_OPAQUE + identityOf(obj));
     return;
   }
@@ -238,8 +222,8 @@ const serializeObject = (
   if (prototype === null || prototype === Object.prototype) {
     out.push(TAG_OBJECT);
   } else {
-    // Two classes can hold identical fields yet mean different things, so the
-    // prototype takes part in the key.
+    // Two classes can hold identical fields yet mean different things, so the prototype takes part
+    // in the key.
     out.push(TAG_CLASS + identityOf(prototype));
   }
 
@@ -270,12 +254,7 @@ const serializeObject = (
   }
 };
 
-/**
- * Builds the cache key for one call's argument list.
- *
- * An empty list yields a stable key, so zero-argument functions are cacheable
- * like any other.
- */
+/** Builds the cache key for one call's argument list. */
 const createKey = (args: ArrayLike<unknown>): string => {
   const out: string[] = [];
   const path = new Map<object, number>();

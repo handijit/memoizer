@@ -1,9 +1,5 @@
 import Memofy from "../lib/index";
 
-/**
- * One test per defect confirmed against the published v2 bundle. Each name
- * states the old behaviour so a reintroduction is unambiguous.
- */
 describe("v2 regressions", () => {
   let memofy: Memofy;
 
@@ -135,7 +131,7 @@ describe("v2 regressions", () => {
       for (let i = 0; i < entries; i++) run(i);
 
       const target = entries - 1;
-      for (let i = 0; i < 2000; i++) run(target); // warm up
+      for (let i = 0; i < 2000; i++) run(target);
       const start = performance.now();
       for (let i = 0; i < HITS; i++) run(target);
       return performance.now() - start;
@@ -144,10 +140,6 @@ describe("v2 regressions", () => {
     const small = measureHitCost(100);
     const large = measureHitCost(10_000);
 
-    // A ratio, not an absolute time, so the assertion survives slow CI hosts
-    // while still catching a return to non-constant lookups. Both the v2 linear
-    // deep-equality scan and a Map delete+set LRU promotion (which makes V8
-    // rehash the whole map) showed 40x or worse here.
     expect(large / small).toBeLessThan(6);
   });
 

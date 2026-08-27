@@ -3,8 +3,8 @@ const transform = {
 };
 
 module.exports = {
-  // Two environments: the library is isomorphic, and the `trace` path only
-  // exists in browsers, so it needs a real `window` to be exercised.
+  // Two environments: the library is isomorphic, and the `trace` path only exists in browsers, so
+  // it needs a real `window` to be exercised.
   projects: [
     {
       displayName: "node",

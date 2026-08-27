@@ -30,9 +30,6 @@ describe("dependencies", () => {
     });
 
     test("should return the fresh value on every later call, not the stale one", () => {
-      // The v2 store appended a second entry for the same arguments and then
-      // kept returning the first match, so a dependency change was visible
-      // exactly once before reverting.
       const settings = { rate: 2 };
       const total = memofy.memoize(
         (price: number) => price * settings.rate,
@@ -106,7 +103,6 @@ describe("dependencies", () => {
 
   describe("getter form", () => {
     test("should observe primitive dependencies changing", () => {
-      // A captured array can never see a rebound primitive; a getter can.
       let rate = 2;
       const spy = jest.fn((price: number) => price * rate);
       const total = memofy.memoize(spy, () => [rate]);

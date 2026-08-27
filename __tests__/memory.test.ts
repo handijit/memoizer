@@ -2,8 +2,6 @@ import Memofy from "../lib/index";
 
 describe("memory behaviour", () => {
   test("should keep a hot loop bounded even when results are falsy", () => {
-    // v2 re-inserted a fresh key on every call for falsy results, so this loop
-    // grew the cache without limit and never served a hit.
     const memofy = new Memofy();
     const spy = jest.fn((n: number) => n % 2 === 0);
     const isEven = memofy.memoize(spy);
@@ -45,7 +43,6 @@ describe("memory behaviour", () => {
       total(10);
     }
 
-    // Each dependency change resets the cache rather than stacking entries.
     expect(total.size).toBe(1);
   });
 
@@ -61,8 +58,6 @@ describe("memory behaviour", () => {
   });
 
   test("should not retain the cache once the memoized function is dropped", async () => {
-    // The cache lives in the memoized function's closure, so dropping the
-    // function makes the whole cache collectable. No registry holds it alive.
     const memofy = new Memofy();
     let run: ((n: number) => number) | null = memofy.memoize((n: number) => n);
     for (let i = 0; i < 100; i++) run(i);
@@ -70,9 +65,6 @@ describe("memory behaviour", () => {
     const ref = new WeakRef(run);
     run = null;
 
-    // A FinalizationRegistry callback is the only portable way to observe this,
-    // and it needs a real GC pass, so assert what is guaranteed instead: the
-    // instance holds no reference back to the memoized function.
     expect(Object.values(memofy)).not.toContain(ref.deref());
   });
 

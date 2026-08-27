@@ -7,24 +7,10 @@ type Node = {
   next: Node | null;
 };
 
-/**
- * Returned by `read` for a miss. A dedicated sentinel keeps a cached
- * `undefined` distinguishable from "not cached".
- */
+/** Returned by `read` for a miss. */
 export const MISS = Symbol("memofy.miss");
 
-/**
- * Bounded least-recently-used cache with optional lazy time-to-live.
- *
- * Recency is tracked with a doubly-linked list rather than by re-inserting
- * into a `Map`. That matters a great deal: V8 rehashes an ordered hash map on
- * deletion, so the obvious `delete` + `set` promotion costs ~20µs per read on a
- * 10k-entry map, while relinking two pointers stays flat at ~0.05µs. Reads
- * therefore never mutate the `Map` at all.
- *
- * Expiry is evaluated on read rather than by timers on purpose — a library
- * that scheduled timers would keep a Node process alive and leak handles.
- */
+/** Bounded least-recently-used cache with optional lazy time-to-live. */
 class CacheStore {
   private readonly index = new Map<string, Node>();
   private readonly maxSize: number;
@@ -72,8 +58,8 @@ class CacheStore {
     this.index.set(key, node);
     this.appendToTail(node);
 
-    // Eviction runs on every insert, so the cache can only ever be one entry
-    // over the limit — a single removal is always enough.
+    // Eviction runs on every insert, so the cache can only ever be one entry over the limit — a
+    // single removal is always enough.
     if (this.maxSize > 0 && this.index.size > this.maxSize) {
       // Guaranteed non-null: the size check implies at least one entry.
       this.remove(this.head as Node);
