@@ -1,17 +1,17 @@
-import Memofy from "../lib/index";
+import Memoizer from "../lib/index";
 
 describe("context binding", () => {
-  let memofy: Memofy;
+  let memoizer: Memoizer;
 
   beforeEach(() => {
-    memofy = new Memofy();
+    memoizer = new Memoizer();
   });
 
   test("should call the function with the given context", () => {
     function greet(this: { name: string }): string {
       return `hi ${this.name}`;
     }
-    const greetAda = memofy.memoize(greet, [], { name: "Ada" });
+    const greetAda = memoizer.memoize(greet, [], { name: "Ada" });
 
     expect(greetAda()).toBe("hi Ada");
   });
@@ -20,8 +20,8 @@ describe("context binding", () => {
     function greet(this: { name: string }): string {
       return `hi ${this.name}`;
     }
-    const greetAda = memofy.memoize(greet, [], { name: "Ada" });
-    const greetGrace = memofy.memoize(greet, [], { name: "Grace" });
+    const greetAda = memoizer.memoize(greet, [], { name: "Ada" });
+    const greetGrace = memoizer.memoize(greet, [], { name: "Grace" });
 
     expect(greetAda()).toBe("hi Ada");
     expect(greetGrace()).toBe("hi Grace");
@@ -32,7 +32,7 @@ describe("context binding", () => {
       public readonly read: () => number;
 
       constructor(private value: number) {
-        this.read = memofy.memoize(
+        this.read = memoizer.memoize(
           function (this: Counter): number {
             return this.value;
           },
@@ -56,7 +56,7 @@ describe("context binding", () => {
         return value * this.multiplier;
       },
     };
-    const scale = memofy.memoize(service.scale, [], service);
+    const scale = memoizer.memoize(service.scale, [], service);
 
     expect(scale(2)).toBe(6);
     expect(scale(2)).toBe(6);
@@ -67,7 +67,7 @@ describe("context binding", () => {
     const spy = jest.fn(function (this: { name: string }): string {
       return this.name;
     });
-    const read = memofy.memoize(spy, [owner], owner);
+    const read = memoizer.memoize(spy, [owner], owner);
 
     expect(read()).toBe("Ada");
     owner.name = "Grace";
@@ -77,7 +77,7 @@ describe("context binding", () => {
 
   test("should work without a context", () => {
     const spy = jest.fn((n: number) => n * 2);
-    const double = memofy.memoize(spy);
+    const double = memoizer.memoize(spy);
 
     expect(double(2)).toBe(4);
   });
@@ -87,7 +87,7 @@ describe("context binding", () => {
     const resolver = jest.fn(function (this: typeof owner, n: number) {
       return `${this.prefix}:${n}`;
     });
-    const run = memofy.memoize((n: number) => n, [], owner, { resolver });
+    const run = memoizer.memoize((n: number) => n, [], owner, { resolver });
 
     run(1);
     expect(resolver).toHaveBeenCalled();

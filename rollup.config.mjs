@@ -36,7 +36,7 @@ export default [
     output: {
       file: "./build/index.umd.js",
       format: "umd",
-      name: "memofy",
+      name: "memoizer",
       exports: "named",
       sourcemap: true,
     },

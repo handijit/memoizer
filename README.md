@@ -1,8 +1,10 @@
-# memofy
+# @handijit/memoizer
 
-[![npm version](https://img.shields.io/npm/v/@ahmetilhn/memofy.svg)](https://www.npmjs.com/package/@ahmetilhn/memofy)
-[![npm downloads](https://img.shields.io/npm/dm/@ahmetilhn/memofy.svg)](https://www.npmjs.com/package/@ahmetilhn/memofy)
-[![license](https://img.shields.io/npm/l/@ahmetilhn/memofy.svg)](./LICENSE)
+> Formerly `@ahmetilhn/memofy` (3.x). Same API; the class is now `Memoizer` (`Memofy` remains as a deprecated alias) and the trace handle is `window.__memoizer__`.
+
+[![npm version](https://img.shields.io/npm/v/@handijit/memoizer.svg)](https://www.npmjs.com/package/@handijit/memoizer)
+[![npm downloads](https://img.shields.io/npm/dm/@handijit/memoizer.svg)](https://www.npmjs.com/package/@handijit/memoizer)
+[![license](https://img.shields.io/npm/l/@handijit/memoizer.svg)](./LICENSE)
 
 Memoization for JavaScript and TypeScript functions. Skips re-running expensive
 work when the arguments have already been seen.
@@ -27,9 +29,9 @@ work when the arguments have already been seen.
 - [Quick start](#quick-start)
 - [When to use it](#when-to-use-it)
 - [API reference](#api-reference)
-  - [`new Memofy(params?)`](#new-memofyparams)
-  - [`memofy.memoize(fn, deps?, context?, options?)`](#memofymemoizefn-deps-context-options)
-  - [`memofy.clear()` / `memofy.init()`](#memofyclear--memofyinit)
+  - [`new Memoizer(params?)`](#new-memoizerparams)
+  - [`memoizer.memoize(fn, deps?, context?, options?)`](#memoizermemoizefn-deps-context-options)
+  - [`memoizer.clear()` / `memoizer.init()`](#memoizerclear--memoizerinit)
   - [The memoized function](#the-memoized-function)
   - [`createKey(args)`](#createkeyargs)
   - [Exported types](#exported-types)
@@ -60,26 +62,26 @@ evergreen release since 2022.
 ## Installation
 
 ```bash
-npm install @ahmetilhn/memofy
+npm install @handijit/memoizer
 ```
 
 ```bash
-yarn add @ahmetilhn/memofy
+yarn add @handijit/memoizer
 ```
 
 ## Quick start
 
 ```js
-import Memofy from "@ahmetilhn/memofy";
+import Memoizer from "@handijit/memoizer";
 
-const memofy = new Memofy();
+const memoizer = new Memoizer();
 
 const slowSum = (a, b) => {
   // pretend this is expensive
   return a + b;
 };
 
-const sum = memofy.memoize(slowSum);
+const sum = memoizer.memoize(slowSum);
 
 sum(1, 2); // runs slowSum
 sum(1, 2); // returns the cached result
@@ -88,16 +90,16 @@ sum(1, 2); // returns the cached result
 Named and CommonJS imports work too:
 
 ```js
-import { Memofy } from "@ahmetilhn/memofy";
-const { Memofy } = require("@ahmetilhn/memofy");
+import { Memoizer } from "@handijit/memoizer";
+const { Memoizer } = require("@handijit/memoizer");
 ```
 
 Browser, no build step:
 
 ```html
-<script src="https://unpkg.com/@ahmetilhn/memofy"></script>
+<script src="https://unpkg.com/@handijit/memoizer"></script>
 <script>
-  const memofy = new memofy.Memofy();
+  const memoizer = new memoizer.Memoizer();
 </script>
 ```
 
@@ -121,13 +123,13 @@ See [Performance](#performance) for measured key-building costs.
 
 ## API reference
 
-### `new Memofy(params?)`
+### `new Memoizer(params?)`
 
 Creates an isolated cache universe. Functions memoized by one instance never
 share results with another.
 
 ```ts
-new Memofy(params?: MemofyParams)
+new Memoizer(params?: MemoizerParams)
 ```
 
 | Option                  | Type      | Default | Description                                                          |
@@ -136,10 +138,10 @@ new Memofy(params?: MemofyParams)
 | `ttl`                   | `number`  | —       | Milliseconds a result stays valid. Omitted means no expiry.           |
 | `cacheRejectedPromises` | `boolean` | `false` | Keep rejected promises cached instead of evicting them.               |
 | `hasLogs`               | `boolean` | `false` | Log every cache hit to the console.                                   |
-| `trace`                 | `boolean` | `false` | Expose the instance as `window.__memofy__` in browsers.               |
+| `trace`                 | `boolean` | `false` | Expose the instance as `window.__memoizer__` in browsers.               |
 
 ```js
-const memofy = new Memofy({ maxSize: 500, ttl: 60_000 });
+const memoizer = new Memoizer({ maxSize: 500, ttl: 60_000 });
 ```
 
 Invalid values fall back to the default rather than throwing: a negative
@@ -147,7 +149,7 @@ Invalid values fall back to the default rather than throwing: a negative
 
 ---
 
-### `memofy.memoize(fn, deps?, context?, options?)`
+### `memoizer.memoize(fn, deps?, context?, options?)`
 
 Returns a memoized copy of `fn` with the same call signature.
 
@@ -178,15 +180,15 @@ Each call to `memoize` creates its **own** cache. Memoizing the same function
 twice gives two independent caches:
 
 ```js
-const a = memofy.memoize(fn);
-const b = memofy.memoize(fn);
+const a = memoizer.memoize(fn);
+const b = memoizer.memoize(fn);
 a(1); // runs
 b(1); // runs again — separate caches
 ```
 
 ---
 
-### `memofy.clear()` / `memofy.init()`
+### `memoizer.clear()` / `memoizer.init()`
 
 ```ts
 clear(): void
@@ -194,11 +196,11 @@ init(): void
 ```
 
 `clear()` empties the caches of every function memoized by this instance.
-`init()` does the same and re-publishes `window.__memofy__` when `trace` is on;
+`init()` does the same and re-publishes `window.__memoizer__` when `trace` is on;
 calling it is optional, since the constructor already runs it.
 
 ```js
-memofy.clear(); // every memoized function starts cold again
+memoizer.clear(); // every memoized function starts cold again
 ```
 
 Caches are held inside each memoized function's closure, so `clear()` runs in
@@ -220,7 +222,7 @@ type Memoized<F> = OmitThisParameter<F> & {
 ```
 
 ```js
-const double = memofy.memoize((n) => n * 2);
+const double = memoizer.memoize((n) => n * 2);
 
 double(1);
 double(2);
@@ -246,7 +248,7 @@ createKey(args: ArrayLike<unknown>): string
 ```
 
 ```js
-import { createKey } from "@ahmetilhn/memofy";
+import { createKey } from "@handijit/memoizer";
 
 createKey([1, "a"]) === createKey([1, "a"]); // true
 createKey([{ a: 1, b: 2 }]) === createKey([{ b: 2, a: 1 }]); // true — order-free
@@ -265,8 +267,8 @@ import type {
   Dependencies,
   Memoized,
   MemoizeOptions,
-  MemofyParams,
-} from "@ahmetilhn/memofy";
+  MemoizerParams,
+} from "@handijit/memoizer";
 ```
 
 ---
@@ -281,7 +283,7 @@ changes — the same idea as React's `useMemo`.
 ```js
 const settings = { taxRate: 0.2 };
 
-const total = memofy.memoize(
+const total = memoizer.memoize(
   (price) => price * (1 + settings.taxRate),
   [settings]
 );
@@ -304,10 +306,10 @@ getter — it is re-read on every call:
 let taxRate = 0.2;
 
 // Wrong: taxRate was copied into the array and can never change.
-memofy.memoize(fn, [taxRate]);
+memoizer.memoize(fn, [taxRate]);
 
 // Right: re-read on every call.
-memofy.memoize(fn, () => [taxRate]);
+memoizer.memoize(fn, () => [taxRate]);
 ```
 
 Dependencies are compared with the same structural rules as arguments, so
@@ -325,8 +327,8 @@ function greet() {
   return `hi ${this.name}`;
 }
 
-const greetAda = memofy.memoize(greet, [], { name: "Ada" });
-const greetGrace = memofy.memoize(greet, [], { name: "Grace" });
+const greetAda = memoizer.memoize(greet, [], { name: "Ada" });
+const greetGrace = memoizer.memoize(greet, [], { name: "Grace" });
 
 greetAda(); // "hi Ada"
 greetGrace(); // "hi Grace"
@@ -339,7 +341,7 @@ cache:
 class Cart {
   constructor(items) {
     this.items = items;
-    this.total = memofy.memoize(
+    this.total = memoizer.memoize(
       function () {
         return this.items.reduce((sum, item) => sum + item.price, 0);
       },
@@ -357,8 +359,8 @@ function greet(this: { name: string }): string {
   return this.name;
 }
 
-memofy.memoize(greet, [], { name: "Ada" }); // ok
-memofy.memoize(greet, [], { wrong: true }); // compile error
+memoizer.memoize(greet, [], { name: "Ada" }); // ok
+memoizer.memoize(greet, [], { wrong: true }); // compile error
 ```
 
 ---
@@ -369,7 +371,7 @@ A promise is cached like any other value, so concurrent calls with the same
 arguments share one in-flight request.
 
 ```js
-const loadUser = memofy.memoize(async (id) => {
+const loadUser = memoizer.memoize(async (id) => {
   const response = await fetch(`/api/users/${id}`);
   return response.json();
 });
@@ -389,7 +391,7 @@ Set `cacheRejectedPromises: true` to keep failures cached — useful when the
 failure is deterministic and retrying is pointless.
 
 Note that attaching the eviction handler marks the promise as handled, so an
-unawaited rejection will not raise an unhandled-rejection warning from memofy's
+unawaited rejection will not raise an unhandled-rejection warning from memoizer's
 side. Handle the promise you receive as you normally would.
 
 ---
@@ -400,7 +402,7 @@ Every memoized function gets a bounded LRU cache — 1000 entries by default.
 Reading an entry marks it most-recently-used, so hot entries survive.
 
 ```js
-const run = memofy.memoize(fn, [], undefined, { maxSize: 50 });
+const run = memoizer.memoize(fn, [], undefined, { maxSize: 50 });
 
 for (let i = 0; i < 10_000; i++) run(i);
 run.size; // 50
@@ -410,14 +412,14 @@ Opt out with `maxSize: 0` (or `Infinity`) when you know the input space is small
 and bounded:
 
 ```js
-const memofy = new Memofy({ maxSize: 0 });
+const memoizer = new Memoizer({ maxSize: 0 });
 ```
 
-`ttl` expires entries by age. Expiry is evaluated lazily on read — memofy never
+`ttl` expires entries by age. Expiry is evaluated lazily on read — memoizer never
 schedules a timer, so it cannot keep a Node process alive or leak handles:
 
 ```js
-const rates = memofy.memoize(fetchRates, [], undefined, { ttl: 60_000 });
+const rates = memoizer.memoize(fetchRates, [], undefined, { ttl: 60_000 });
 ```
 
 ---
@@ -428,7 +430,7 @@ When a cheap discriminator already exists, skip structural serialisation
 entirely:
 
 ```js
-const render = memofy.memoize(
+const render = memoizer.memoize(
   (user) => expensiveTemplate(user),
   [],
   undefined,
@@ -452,16 +454,16 @@ its parameters from `fn`.
 `hasLogs` logs every cache hit:
 
 ```js
-const memofy = new Memofy({ hasLogs: true });
-// memofy: "getTotal" returned a cached value. 42
+const memoizer = new Memoizer({ hasLogs: true });
+// memoizer: "getTotal" returned a cached value. 42
 ```
 
 `trace` exposes the instance in browsers so you can inspect or clear from the
 console:
 
 ```js
-new Memofy({ trace: true });
-// window.__memofy__.clear()
+new Memoizer({ trace: true });
+// window.__memoizer__.clear()
 ```
 
 Both are no-ops outside the browser, so leaving `trace` on will not break SSR.
@@ -470,17 +472,17 @@ Both are no-ops outside the browser, so leaving `trace` on will not break SSR.
 
 ## Framework integration
 
-memofy is framework-agnostic; there is nothing to install beyond the package.
+memoizer is framework-agnostic; there is nothing to install beyond the package.
 
 ### React
 
 Create the instance once, outside the component, and memoize outside render.
 
 ```jsx
-import Memofy from "@ahmetilhn/memofy";
+import Memoizer from "@handijit/memoizer";
 
-const memofy = new Memofy();
-const formatRows = memofy.memoize((rows, locale) =>
+const memoizer = new Memoizer();
+const formatRows = memoizer.memoize((rows, locale) =>
   expensiveFormat(rows, locale)
 );
 
@@ -491,17 +493,17 @@ function Table({ rows, locale }) {
 
 Unlike `useMemo`, the cache survives unmounts and is shared across components,
 which is the point when the same inputs recur. Use `useMemo` for per-component
-values tied to a render; use memofy for pure computations shared app-wide.
+values tied to a render; use memoizer for pure computations shared app-wide.
 
 ### Vue / Nuxt (client side)
 
 ```js
 // composables/useFormatter.js
-import Memofy from "@ahmetilhn/memofy";
+import Memoizer from "@handijit/memoizer";
 
-const memofy = new Memofy();
+const memoizer = new Memoizer();
 
-export const formatPrice = memofy.memoize((cents, currency) =>
+export const formatPrice = memoizer.memoize((cents, currency) =>
   new Intl.NumberFormat(currency).format(cents / 100)
 );
 ```
@@ -510,10 +512,10 @@ export const formatPrice = memofy.memoize((cents, currency) =>
 
 ```js
 // lib/search.js
-import Memofy from "@ahmetilhn/memofy";
+import Memoizer from "@handijit/memoizer";
 
-const memofy = new Memofy({ maxSize: 200 });
-export const search = memofy.memoize((query, items) => rank(query, items));
+const memoizer = new Memoizer({ maxSize: 200 });
+export const search = memoizer.memoize((query, items) => rank(query, items));
 ```
 
 ### SSR: Nuxt, Next, and any Node server
@@ -527,8 +529,8 @@ For per-user work, create an instance per request:
 ```js
 // Next.js route handler
 export async function GET(request) {
-  const memofy = new Memofy(); // isolated to this request
-  const loadOrders = memofy.memoize((userId) =>
+  const memoizer = new Memoizer(); // isolated to this request
+  const loadOrders = memoizer.memoize((userId) =>
     db.orders.findMany({ userId })
   );
 
@@ -539,8 +541,8 @@ export async function GET(request) {
 ```js
 // Nuxt server route
 export default defineEventHandler(async (event) => {
-  const memofy = new Memofy();
-  const loadCart = memofy.memoize((userId) => fetchCart(userId));
+  const memoizer = new Memoizer();
+  const loadCart = memoizer.memoize((userId) => fetchCart(userId));
 
   return loadCart(await getUserId(event));
 });
@@ -553,10 +555,10 @@ and set a `ttl` so entries do not go stale.
 
 ```html
 <script type="module">
-  import Memofy from "https://unpkg.com/@ahmetilhn/memofy/build/index.mjs";
+  import Memoizer from "https://unpkg.com/@handijit/memoizer/build/index.mjs";
 
-  const memofy = new Memofy();
-  const fib = memofy.memoize((n) => (n < 2 ? n : fib(n - 1) + fib(n - 2)));
+  const memoizer = new Memoizer();
+  const fib = memoizer.memoize((n) => (n < 2 ? n : fib(n - 1) + fib(n - 2)));
   console.log(fib(35));
 </script>
 ```
@@ -585,7 +587,7 @@ Two caveats worth knowing:
 
 - Building a key reads getters, so a getter with side effects will fire.
 - If a key cannot be built — a getter throws, or nesting exceeds 500 levels —
-  memofy calls the original function directly. You lose caching, never
+  memoizer calls the original function directly. You lose caching, never
   correctness.
 
 Both are avoidable with a [`resolver`](#custom-keys-with-resolver).
@@ -633,7 +635,7 @@ Entry points:
 | ---------------------- | ------------------ |
 | ESM / bundlers         | `build/index.mjs`  |
 | CommonJS               | `build/index.cjs`  |
-| `<script>` / CDN       | `build/index.umd.js` (global `memofy`) |
+| `<script>` / CDN       | `build/index.umd.js` (global `memoizer`) |
 | TypeScript             | `build/index.d.ts` |
 
 ---
@@ -667,7 +669,7 @@ the returned function.
 Yes, if the recursive call goes through the memoized name:
 
 ```js
-const fib = memofy.memoize((n) => (n < 2 ? n : fib(n - 1) + fib(n - 2)));
+const fib = memoizer.memoize((n) => (n < 2 ? n : fib(n - 1) + fib(n - 2)));
 ```
 
 **Is it safe in SSR?**
@@ -699,13 +701,13 @@ observable behaviour, hence the major version.
 Required code changes:
 
 ```diff
-- import { initMemofy } from "@ahmetilhn/memofy";
-- const memofy = new Memofy();
-+ import Memofy from "@ahmetilhn/memofy";
-+ const memofy = new Memofy();
+- import { initMemoizer } from "@handijit/memoizer";
+- const memoizer = new Memoizer();
++ import Memoizer from "@handijit/memoizer";
++ const memoizer = new Memoizer();
 ```
 
-- `initMemofy` no longer exists; the constructor initialises the instance.
+- `initMemoizer` no longer exists; the constructor initialises the instance.
 - `npm uninstall @ahmetilhn/handy-utils` unless you use it directly.
 - If you relied on an unbounded cache, pass `{ maxSize: 0 }`.
 - If you depended on primitive `deps` never invalidating, that was a bug; use
@@ -741,4 +743,4 @@ the version already on npm and skips the release.
 
 ## License
 
-MIT © [Ahmet ilhan](https://github.com/ahmetilhn)
+MIT © [Han Dijit](https://github.com/handijit)

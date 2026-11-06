@@ -1,15 +1,15 @@
-import Memofy from "../lib/index";
+import Memoizer from "../lib/index";
 
 describe("v2 regressions", () => {
-  let memofy: Memofy;
+  let memoizer: Memoizer;
 
   beforeEach(() => {
-    memofy = new Memofy();
+    memoizer = new Memoizer();
   });
 
   test("falsy results were recomputed on every call and re-inserted", () => {
     const spy = jest.fn((n: number) => n % 2 === 0);
-    const isEven = memofy.memoize(spy);
+    const isEven = memoizer.memoize(spy);
 
     for (let i = 0; i < 5; i++) expect(isEven(3)).toBe(false);
 
@@ -19,7 +19,7 @@ describe("v2 regressions", () => {
 
   test("a dependency change surfaced once, then reverted to the stale value", () => {
     const dep = { p: 10 };
-    const scale = memofy.memoize((x: number) => dep.p * x, [dep]);
+    const scale = memoizer.memoize((x: number) => dep.p * x, [dep]);
 
     expect(scale(1)).toBe(10);
     dep.p = 20;
@@ -28,14 +28,14 @@ describe("v2 regressions", () => {
   });
 
   test("objects without own enumerable keys collapsed into one cache slot", () => {
-    const hostname = memofy.memoize((url: URL) => url.hostname);
+    const hostname = memoizer.memoize((url: URL) => url.hostname);
 
     expect(hostname(new URL("https://a.com"))).toBe("a.com");
     expect(hostname(new URL("https://b.com"))).toBe("b.com");
   });
 
   test("Map, Set, RegExp and Error arguments all collided", () => {
-    const mapSize = memofy.memoize((m: Map<string, number>) => m.size);
+    const mapSize = memoizer.memoize((m: Map<string, number>) => m.size);
     expect(mapSize(new Map([["a", 1]]))).toBe(1);
     expect(
       mapSize(
@@ -46,22 +46,22 @@ describe("v2 regressions", () => {
       )
     ).toBe(2);
 
-    const setSize = memofy.memoize((s: Set<number>) => s.size);
+    const setSize = memoizer.memoize((s: Set<number>) => s.size);
     expect(setSize(new Set([1]))).toBe(1);
     expect(setSize(new Set([1, 2]))).toBe(2);
 
-    const source = memofy.memoize((r: RegExp) => r.source);
+    const source = memoizer.memoize((r: RegExp) => r.source);
     expect(source(/foo/)).toBe("foo");
     expect(source(/bar/)).toBe("bar");
 
-    const message = memofy.memoize((e: Error) => e.message);
+    const message = memoizer.memoize((e: Error) => e.message);
     expect(message(new Error("a"))).toBe("a");
     expect(message(new Error("b"))).toBe("b");
   });
 
   test("a circular argument threw RangeError after running the function", () => {
     const spy = jest.fn((node: { name: string }) => node.name);
-    const read = memofy.memoize(spy);
+    const read = memoizer.memoize(spy);
     const node: Record<string, unknown> = { name: "x" };
     node.self = node;
 
@@ -74,8 +74,8 @@ describe("v2 regressions", () => {
       return `hi ${this.name}`;
     }
 
-    expect(memofy.memoize(greet, [], { name: "Alice" })()).toBe("hi Alice");
-    expect(memofy.memoize(greet, [], { name: "Bob" })()).toBe("hi Bob");
+    expect(memoizer.memoize(greet, [], { name: "Alice" })()).toBe("hi Alice");
+    expect(memoizer.memoize(greet, [], { name: "Bob" })()).toBe("hi Bob");
   });
 
   test("a rejected promise was cached permanently", async () => {
@@ -85,7 +85,7 @@ describe("v2 regressions", () => {
       if (attempt < 3) throw new Error(`network down #${attempt}`);
       return "ok";
     });
-    const load = memofy.memoize(spy);
+    const load = memoizer.memoize(spy);
 
     await expect(load()).rejects.toThrow("network down #1");
     await expect(load()).rejects.toThrow("network down #2");
@@ -95,7 +95,7 @@ describe("v2 regressions", () => {
 
   test("NaN arguments never hit and appended an entry per call", () => {
     const spy = jest.fn((n: number) => String(n));
-    const run = memofy.memoize(spy);
+    const run = memoizer.memoize(spy);
 
     for (let i = 0; i < 4; i++) run(NaN);
 
@@ -104,7 +104,7 @@ describe("v2 regressions", () => {
   });
 
   test("f(-0) returned f(0)'s cached result", () => {
-    const reciprocal = memofy.memoize((n: number) => 1 / n);
+    const reciprocal = memoizer.memoize((n: number) => 1 / n);
 
     expect(reciprocal(0)).toBe(Infinity);
     expect(reciprocal(-0)).toBe(-Infinity);
@@ -112,7 +112,7 @@ describe("v2 regressions", () => {
 
   test("zero-argument functions were never cached", () => {
     const spy = jest.fn(() => "value");
-    const get = memofy.memoize(spy);
+    const get = memoizer.memoize(spy);
 
     get();
     get();
@@ -125,7 +125,7 @@ describe("v2 regressions", () => {
     const HITS = 20_000;
 
     const measureHitCost = (entries: number): number => {
-      const run = memofy.memoize((n: number) => n, [], undefined, {
+      const run = memoizer.memoize((n: number) => n, [], undefined, {
         maxSize: 0,
       });
       for (let i = 0; i < entries; i++) run(i);
@@ -146,7 +146,7 @@ describe("v2 regressions", () => {
   test("deps compared by index missed a shrinking dependency list", () => {
     let deps: unknown[] = [{ a: 1 }, { b: 2 }];
     const spy = jest.fn(() => deps.length);
-    const count = memofy.memoize(spy, () => deps);
+    const count = memoizer.memoize(spy, () => deps);
 
     expect(count()).toBe(2);
     deps = [{ a: 1 }];

@@ -2,6 +2,6 @@
 set -e
 
 rm -rf build
-echo "Building memofy..."
+echo "Building memoizer..."
 rollup -c
 echo "Created production build 📦"

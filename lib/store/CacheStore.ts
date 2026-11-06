@@ -8,7 +8,7 @@ type Node = {
 };
 
 /** Returned by `read` for a miss. */
-export const MISS = Symbol("memofy.miss");
+export const MISS = Symbol("memoizer.miss");
 
 /** Bounded least-recently-used cache with optional lazy time-to-live. */
 class CacheStore {

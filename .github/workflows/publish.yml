@@ -73,18 +73,18 @@ jobs:
           WORK="$(mktemp -d)"
           cd "$WORK"
           npm init -y >/dev/null
-          npm install --ignore-scripts "$GITHUB_WORKSPACE"/ahmetilhn-memofy-*.tgz
+          npm install --ignore-scripts "$GITHUB_WORKSPACE"/handijit-memoizer-*.tgz
 
           cat > esm.mjs <<'EOF'
-          import Memofy from "@ahmetilhn/memofy";
-          const memoized = new Memofy().memoize((n) => n * 2);
+          import Memoizer from "@handijit/memoizer";
+          const memoized = new Memoizer().memoize((n) => n * 2);
           if (memoized(2) !== 4) throw new Error("ESM entry is broken");
           console.log("ESM entry OK");
           EOF
 
           cat > cjs.cjs <<'EOF'
-          const { Memofy } = require("@ahmetilhn/memofy");
-          const memoized = new Memofy().memoize((n) => n * 2);
+          const { Memoizer } = require("@handijit/memoizer");
+          const memoized = new Memoizer().memoize((n) => n * 2);
           if (memoized(2) !== 4) throw new Error("CJS entry is broken");
           console.log("CJS entry OK");
           EOF

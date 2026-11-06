@@ -10,7 +10,7 @@ export type IdentityRegistry = {
 /** Symbols became valid WeakMap keys in V8 10.8 / ES2023. */
 export const supportsWeakSymbolKeys = (): boolean => {
   try {
-    new WeakMap().set(Symbol("memofy") as unknown as object, 1);
+    new WeakMap().set(Symbol("memoizer") as unknown as object, 1);
     return true;
   } catch {
     return false;

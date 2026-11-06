@@ -1,7 +1,20 @@
 {
-  "name": "@ahmetilhn/memofy",
-  "version": "3.0.1",
+  "name": "@handijit/memoizer",
+  "version": "1.0.0",
   "description": "Fast, dependency-free memoization for JavaScript and TypeScript functions, with dependency tracking, LRU eviction and TTL.",
+  "author": "Ahmet ilhan <ahmetilhn.dev@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/handijit/memoizer.git"
+  },
+  "homepage": "https://github.com/handijit/memoizer#readme",
+  "bugs": {
+    "url": "https://github.com/handijit/memoizer/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "main": "./build/index.cjs",
   "module": "./build/index.mjs",
   "types": "./build/index.d.ts",
@@ -34,10 +47,6 @@
     "size": "node ./scripts/report-size.mjs",
     "prepublishOnly": "npm run verify"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+ssh://git@github.com/ahmetilhn/memofy.git"
-  },
   "keywords": [
     "memoization",
     "cache",
@@ -54,20 +63,14 @@
     "use-memo",
     "memoizer",
     "cacheable functions",
-    "memofy",
     "react",
     "vue",
     "nuxt",
     "nextjs",
-    "ssr"
+    "ssr",
+    "memofy"
   ],
   "private": false,
-  "author": "Ahmet ilhan <ahmetilhn.dev@gmail.com>",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/ahmetilhn/memofy/issues"
-  },
-  "homepage": "https://github.com/ahmetilhn/memofy#readme",
   "devDependencies": {
     "@babel/core": "^8.0.1",
     "@babel/preset-env": "^8.0.2",

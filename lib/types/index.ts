@@ -6,8 +6,8 @@ export type AnyFunction = (...args: any[]) => any;
 /** Dependencies may be given as a fixed array, or as a getter that is evaluated on every call. */
 export type Dependencies = unknown[] | (() => unknown[]);
 
-export type MemofyParams = {
-  /** Exposes the instance on `window.__memofy__` in browsers. */
+export type MemoizerParams = {
+  /** Exposes the instance on `window.__memoizer__` in browsers. */
   trace?: boolean;
   /** Logs every cache hit to the console. */
   hasLogs?: boolean;

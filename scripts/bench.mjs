@@ -1,6 +1,6 @@
-import Memofy from "../build/index.mjs";
+import Memoizer from "../build/index.mjs";
 
-const memofy = new Memofy();
+const memoizer = new Memoizer();
 
 const time = (label, fn, iterations, warmups = Math.min(iterations, 1000)) => {
   // Warm up so the numbers reflect steady state rather than JIT tiering.
@@ -29,23 +29,23 @@ const primeFactorSum = (n) => {
   return value > 1 ? sum + value : sum;
 };
 
-console.log("\nmemofy benchmark\n");
+console.log("\nmemoizer benchmark\n");
 
 console.log("Expensive function, same argument");
 {
   // A semiprime with two large factors, so trial division cannot shortcut.
   const INPUT = 999_999_937 * 2;
-  const memoized = memofy.memoize(primeFactorSum);
+  const memoized = memoizer.memoize(primeFactorSum);
   const ITER = 200;
 
-  const cold = time("without memofy", () => primeFactorSum(INPUT), ITER, 5);
-  const warm = time("with memofy (cached)", () => memoized(INPUT), ITER, 5);
+  const cold = time("without memoizer", () => primeFactorSum(INPUT), ITER, 5);
+  const warm = time("with memoizer (cached)", () => memoized(INPUT), ITER, 5);
   console.log(`  → ${(cold / warm).toFixed(0)}x faster\n`);
 }
 
 console.log("Cache hit cost by cache size (constant-time lookup)");
 for (const size of [100, 1000, 10_000, 50_000]) {
-  const run = memofy.memoize((n) => n * 2, [], undefined, { maxSize: 0 });
+  const run = memoizer.memoize((n) => n * 2, [], undefined, { maxSize: 0 });
   for (let i = 0; i < size; i++) run(i);
   const target = size - 1;
   time(`${String(size).padStart(6)} entries, hit on last inserted`, () => run(target), 20_000);
@@ -58,10 +58,10 @@ console.log("\nKey building cost by argument shape");
   const nested = { a: { b: { c: { d: { e: [1, 2, 3] } } } } };
   const list = Array.from({ length: 100 }, (_, i) => i);
 
-  const primitives = memofy.memoize((a, b) => a + b);
-  const object = memofy.memoize((o) => o.id);
-  const deep = memofy.memoize((o) => o.a.b.c.d.e.length);
-  const array = memofy.memoize((a) => a.length);
+  const primitives = memoizer.memoize((a, b) => a + b);
+  const object = memoizer.memoize((o) => o.id);
+  const deep = memoizer.memoize((o) => o.a.b.c.d.e.length);
+  const array = memoizer.memoize((a) => a.length);
 
   time("two primitives", () => primitives(1, 2), ITER);
   time("small object (2 keys)", () => object(small), ITER);

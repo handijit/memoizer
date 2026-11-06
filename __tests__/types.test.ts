@@ -1,4 +1,4 @@
-import Memofy from "../lib/index";
+import Memoizer from "../lib/index";
 import type { Memoized } from "../lib/types";
 
 type Equals<A, B> =
@@ -13,10 +13,10 @@ const expectType = <Expected>(): (<Actual>(
 };
 
 describe("type surface", () => {
-  const memofy = new Memofy();
+  const memoizer = new Memoizer();
 
   test("should preserve parameter and return types", () => {
-    const sum = memofy.memoize((a: number, b: string) => ({ a, b }));
+    const sum = memoizer.memoize((a: number, b: string) => ({ a, b }));
 
     expectType<{ a: number; b: string }>()(sum(1, "x"));
 
@@ -29,8 +29,8 @@ describe("type surface", () => {
   });
 
   test("should preserve optional and rest parameters", () => {
-    const withOptional = memofy.memoize((a: number, b?: string) => [a, b]);
-    const withRest = memofy.memoize((...values: number[]) => values.length);
+    const withOptional = memoizer.memoize((a: number, b?: string) => [a, b]);
+    const withRest = memoizer.memoize((...values: number[]) => values.length);
 
     expectType<(number | string | undefined)[]>()(withOptional(1));
     expectType<number>()(withRest(1, 2, 3));
@@ -43,7 +43,7 @@ describe("type surface", () => {
     function greet(this: { name: string }, greeting: string): string {
       return `${greeting} ${this.name}`;
     }
-    const greetAda = memofy.memoize(greet, [], { name: "Ada" });
+    const greetAda = memoizer.memoize(greet, [], { name: "Ada" });
 
     expectType<string>()(greetAda("hi"));
 
@@ -64,13 +64,13 @@ describe("type surface", () => {
     }
 
     // @ts-expect-error the context must provide `name`
-    memofy.memoize(greet, [], { wrong: true });
+    memoizer.memoize(greet, [], { wrong: true });
 
-    expect(memofy.memoize(greet, [], { name: "Ada" })()).toBe("Ada");
+    expect(memoizer.memoize(greet, [], { name: "Ada" })()).toBe("Ada");
   });
 
   test("should expose cache controls on the memoized function", () => {
-    const run = memofy.memoize((n: number) => n);
+    const run = memoizer.memoize((n: number) => n);
 
     expectType<number>()(run.size);
     expectType<() => void>()(run.clear);
@@ -79,7 +79,7 @@ describe("type surface", () => {
   });
 
   test("should type the resolver against the original parameters", () => {
-    memofy.memoize((a: number, b: string) => a + b, [], undefined, {
+    memoizer.memoize((a: number, b: string) => a + b, [], undefined, {
       resolver: (a, b) => {
         expectType<number>()(a);
         expectType<string>()(b);
@@ -87,7 +87,7 @@ describe("type surface", () => {
       },
     });
 
-    memofy.memoize((a: number) => a, [], undefined, {
+    memoizer.memoize((a: number) => a, [], undefined, {
       // @ts-expect-error the resolver must return a string
       resolver: (a) => a,
     });
@@ -97,15 +97,15 @@ describe("type surface", () => {
 
   test("should keep Memoized assignable to the original signature", () => {
     type Fn = (n: number) => string;
-    const run: Memoized<Fn> = memofy.memoize((n: number) => String(n));
+    const run: Memoized<Fn> = memoizer.memoize((n: number) => String(n));
     const plain: Fn = run;
 
     expect(plain(1)).toBe("1");
   });
 
   test("should accept both dependency forms", () => {
-    const fromArray = memofy.memoize((n: number) => n, [{ a: 1 }]);
-    const fromGetter = memofy.memoize((n: number) => n, () => [{ a: 1 }]);
+    const fromArray = memoizer.memoize((n: number) => n, [{ a: 1 }]);
+    const fromGetter = memoizer.memoize((n: number) => n, () => [{ a: 1 }]);
 
     expect(fromArray(1)).toBe(1);
     expect(fromGetter(1)).toBe(1);

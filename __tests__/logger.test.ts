@@ -7,7 +7,7 @@ describe("writeToConsole", () => {
     writeToConsole("getTotal", 42);
 
     expect(info).toHaveBeenCalledWith(
-      'memofy: "getTotal" returned a cached value.',
+      'memoizer: "getTotal" returned a cached value.',
       42
     );
   });
@@ -18,7 +18,7 @@ describe("writeToConsole", () => {
     writeToConsole("", null);
 
     expect(info).toHaveBeenCalledWith(
-      'memofy: "anonymous" returned a cached value.',
+      'memoizer: "anonymous" returned a cached value.',
       null
     );
   });

@@ -6,7 +6,7 @@ import type {
   Dependencies,
   Memoized,
   MemoizeOptions,
-  MemofyParams,
+  MemoizerParams,
 } from "./types";
 
 const DEFAULT_MAX_SIZE = 1000;
@@ -31,7 +31,7 @@ const normalizeTtl = (val: number | undefined, fallback: number): number => {
   return val;
 };
 
-class Memofy {
+class Memoizer {
   private readonly trace: boolean;
   private readonly hasLogs: boolean;
   private readonly maxSize: number;
@@ -41,7 +41,7 @@ class Memofy {
   /** Bumped by `clear()`. */
   private generation = 0;
 
-  constructor(params: MemofyParams = {}) {
+  constructor(params: MemoizerParams = {}) {
     this.trace = params.trace === true;
     this.hasLogs = params.hasLogs === true;
     this.maxSize = normalizeSize(params.maxSize, DEFAULT_MAX_SIZE);
@@ -56,8 +56,8 @@ class Memofy {
     this.clear();
 
     if (this.trace && isClient()) {
-      window.__memofy__ = this;
-      console.info("memofy: tracing enabled, instance exposed as __memofy__");
+      window.__memoizer__ = this;
+      console.info("memoizer: tracing enabled, instance exposed as __memoizer__");
     }
   };
 
@@ -153,12 +153,16 @@ class Memofy {
   };
 }
 
-export default Memofy;
-export { Memofy, createKey };
+export default Memoizer;
+export { Memoizer, createKey };
+/** @deprecated Package renamed to `@handijit/memoizer`; use `Memoizer`. Kept for one major. */
+export { Memoizer as Memofy };
 export type {
   AnyFunction,
   Dependencies,
   Memoized,
   MemoizeOptions,
-  MemofyParams,
+  MemoizerParams,
+  /** @deprecated Use `MemoizerParams`. */
+  MemoizerParams as MemofyParams,
 };

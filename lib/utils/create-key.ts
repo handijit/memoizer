@@ -1,6 +1,6 @@
 /**
  * Structural cache-key serialisation. Turns an argument list into a string that is stable across
- * calls and injective for every value memofy can…
+ * calls and injective for every value memoizer can…
  */
 
 import { createIdentityRegistry } from "./identity";
@@ -109,7 +109,7 @@ const serialize = (
 
   if (path.size >= MAX_DEPTH) {
     throw new RangeError(
-      `memofy: argument nesting exceeded ${MAX_DEPTH} levels`
+      `memoizer: argument nesting exceeded ${MAX_DEPTH} levels`
     );
   }
   path.set(obj, path.size);
