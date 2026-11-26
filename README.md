@@ -1,10 +1,10 @@
-# @handijit/memoizer
+# @handijitcom/memoizer
 
 > Formerly `@ahmetilhn/memofy` (3.x). Same API; the class is now `Memoizer` (`Memofy` remains as a deprecated alias) and the trace handle is `window.__memoizer__`.
 
-[![npm version](https://img.shields.io/npm/v/@handijit/memoizer.svg)](https://www.npmjs.com/package/@handijit/memoizer)
-[![npm downloads](https://img.shields.io/npm/dm/@handijit/memoizer.svg)](https://www.npmjs.com/package/@handijit/memoizer)
-[![license](https://img.shields.io/npm/l/@handijit/memoizer.svg)](./LICENSE)
+[![npm version](https://img.shields.io/npm/v/@handijitcom/memoizer.svg)](https://www.npmjs.com/package/@handijitcom/memoizer)
+[![npm downloads](https://img.shields.io/npm/dm/@handijitcom/memoizer.svg)](https://www.npmjs.com/package/@handijitcom/memoizer)
+[![license](https://img.shields.io/npm/l/@handijitcom/memoizer.svg)](./LICENSE)
 
 Memoization for JavaScript and TypeScript functions. Skips re-running expensive
 work when the arguments have already been seen.
@@ -62,17 +62,17 @@ evergreen release since 2022.
 ## Installation
 
 ```bash
-npm install @handijit/memoizer
+npm install @handijitcom/memoizer
 ```
 
 ```bash
-yarn add @handijit/memoizer
+yarn add @handijitcom/memoizer
 ```
 
 ## Quick start
 
 ```js
-import Memoizer from "@handijit/memoizer";
+import Memoizer from "@handijitcom/memoizer";
 
 const memoizer = new Memoizer();
 
@@ -90,14 +90,14 @@ sum(1, 2); // returns the cached result
 Named and CommonJS imports work too:
 
 ```js
-import { Memoizer } from "@handijit/memoizer";
-const { Memoizer } = require("@handijit/memoizer");
+import { Memoizer } from "@handijitcom/memoizer";
+const { Memoizer } = require("@handijitcom/memoizer");
 ```
 
 Browser, no build step:
 
 ```html
-<script src="https://unpkg.com/@handijit/memoizer"></script>
+<script src="https://unpkg.com/@handijitcom/memoizer"></script>
 <script>
   const memoizer = new memoizer.Memoizer();
 </script>
@@ -248,7 +248,7 @@ createKey(args: ArrayLike<unknown>): string
 ```
 
 ```js
-import { createKey } from "@handijit/memoizer";
+import { createKey } from "@handijitcom/memoizer";
 
 createKey([1, "a"]) === createKey([1, "a"]); // true
 createKey([{ a: 1, b: 2 }]) === createKey([{ b: 2, a: 1 }]); // true — order-free
@@ -268,7 +268,7 @@ import type {
   Memoized,
   MemoizeOptions,
   MemoizerParams,
-} from "@handijit/memoizer";
+} from "@handijitcom/memoizer";
 ```
 
 ---
@@ -479,7 +479,7 @@ memoizer is framework-agnostic; there is nothing to install beyond the package.
 Create the instance once, outside the component, and memoize outside render.
 
 ```jsx
-import Memoizer from "@handijit/memoizer";
+import Memoizer from "@handijitcom/memoizer";
 
 const memoizer = new Memoizer();
 const formatRows = memoizer.memoize((rows, locale) =>
@@ -499,7 +499,7 @@ values tied to a render; use memoizer for pure computations shared app-wide.
 
 ```js
 // composables/useFormatter.js
-import Memoizer from "@handijit/memoizer";
+import Memoizer from "@handijitcom/memoizer";
 
 const memoizer = new Memoizer();
 
@@ -512,7 +512,7 @@ export const formatPrice = memoizer.memoize((cents, currency) =>
 
 ```js
 // lib/search.js
-import Memoizer from "@handijit/memoizer";
+import Memoizer from "@handijitcom/memoizer";
 
 const memoizer = new Memoizer({ maxSize: 200 });
 export const search = memoizer.memoize((query, items) => rank(query, items));
@@ -555,7 +555,7 @@ and set a `ttl` so entries do not go stale.
 
 ```html
 <script type="module">
-  import Memoizer from "https://unpkg.com/@handijit/memoizer/build/index.mjs";
+  import Memoizer from "https://unpkg.com/@handijitcom/memoizer/build/index.mjs";
 
   const memoizer = new Memoizer();
   const fib = memoizer.memoize((n) => (n < 2 ? n : fib(n - 1) + fib(n - 2)));
@@ -701,9 +701,9 @@ observable behaviour, hence the major version.
 Required code changes:
 
 ```diff
-- import { initMemoizer } from "@handijit/memoizer";
+- import { initMemoizer } from "@handijitcom/memoizer";
 - const memoizer = new Memoizer();
-+ import Memoizer from "@handijit/memoizer";
++ import Memoizer from "@handijitcom/memoizer";
 + const memoizer = new Memoizer();
 ```
 
@@ -740,6 +740,14 @@ points work, publishes to npm with provenance, and pushes a `v<version>` tag.
 
 A commit that does not change the version is not an error — the workflow sees
 the version already on npm and skips the release.
+
+<!-- handijit:about:start -->
+## About Han Dijit
+
+`@handijitcom/memoizer` is built and maintained by **[Han Dijit](https://www.handijit.com)**, a software company serving businesses across Türkiye: web, e-commerce, mobile, artificial intelligence, cyber security and enterprise software projects.
+
+[www.handijit.com](https://www.handijit.com) · [All Han Dijit packages on npm](https://www.npmjs.com/org/handijitcom)
+<!-- handijit:about:end -->
 
 ## License
 

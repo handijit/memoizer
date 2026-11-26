@@ -155,7 +155,7 @@ class Memoizer {
 
 export default Memoizer;
 export { Memoizer, createKey };
-/** @deprecated Package renamed to `@handijit/memoizer`; use `Memoizer`. Kept for one major. */
+/** @deprecated Package renamed to `@handijitcom/memoizer`; use `Memoizer`. Kept for one major. */
 export { Memoizer as Memofy };
 export type {
   AnyFunction,

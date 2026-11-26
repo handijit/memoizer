@@ -1,67 +1,39 @@
+# Han Dijit standard CI (identical in every @handijitcom package).
 name: CI
 
-# Pushes to master are verified by the publish workflow, which runs the same checks before
-# releasing — no need to run everything twice.
+# Pull requests only. A push to master is gated by `publish.yml`, which runs the same commands
+# before anything reaches the registry.
 on:
   pull_request:
-  push:
-    branches-ignore: [master]
   workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   verify:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        # Node 24 is the supported floor, declared in package.json engines.
-        node-version: [24.x]
+    timeout-minutes: 20
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: "24"
           cache: npm
 
-      # ignore-scripts blocks dependency lifecycle scripts, which are an
-      # arbitrary-code-execution path during install.
+      # Dependency lifecycle scripts are an arbitrary-code-execution path during install.
       - name: Install dependencies
         run: npm ci --ignore-scripts
 
-      - name: Type-check
-        run: npm run typecheck
+      - name: Format
+        run: npm run format:check --if-present
 
-      - name: Test
-        run: npm test
-
-      - name: Build
-        run: npm run build
-
-      - name: Bundle size budget
-        run: npm run size
-
-      - name: Verify the published package works
-        run: |
-          npm pack
-          cd "$(mktemp -d)"
-          npm init -y >/dev/null
-          npm install --ignore-scripts "$GITHUB_WORKSPACE"/handijit-memoizer-*.tgz
-
-          cat > esm.mjs <<'EOF'
-          import Memoizer from "@handijit/memoizer";
-          const memoized = new Memoizer().memoize((n) => n * 2);
-          if (memoized(2) !== 4) throw new Error("ESM entry is broken");
-          console.log("ESM entry OK");
-          EOF
-
-          cat > cjs.cjs <<'EOF'
-          const { Memoizer } = require("@handijit/memoizer");
-          const memoized = new Memoizer().memoize((n) => n * 2);
-          if (memoized(2) !== 4) throw new Error("CJS entry is broken");
-          console.log("CJS entry OK");
-          EOF
-
-          node esm.mjs
-          node cjs.cjs
+      # The one gate each package defines: typecheck, lint, tests, build, size...
+      - name: Verify
+        run: npm run verify

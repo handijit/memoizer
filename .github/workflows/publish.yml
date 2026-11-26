@@ -1,4 +1,7 @@
-name: Publish to NPM
+# Han Dijit standard release (identical in every @handijitcom package).
+# A push to master that carries a version not yet on npm verifies, publishes with provenance,
+# tags `v<version>` and creates the GitHub Release. Any other push is a no-op.
+name: Publish to npm
 
 on:
   push:
@@ -6,34 +9,32 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write # to push the release tag
-  id-token: write # for npm provenance
+  contents: write # push the release tag and create the GitHub Release
+  id-token: write # signs the npm provenance statement
 
-# Never let two releases race each other onto the registry.
 concurrency:
   group: publish-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: false # never let two releases race onto the registry
 
 jobs:
   publish:
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
-          node-version: 24.x
-          registry-url: "https://registry.npmjs.org/"
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
           cache: npm
 
-      # ignore-scripts blocks dependency lifecycle scripts, which are an
-      # arbitrary-code-execution path during install.
       - name: Install dependencies
         run: npm ci --ignore-scripts
 
-      # Publishing a version that already exists is a hard error, so a commit that does not
-      # bump the version should skip the release, not fail it.
+      # skip: this version is already on npm. publish: new version, or the package's first release.
       - name: Decide whether this version needs publishing
         id: check
         run: |
@@ -43,63 +44,84 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
           if npm view "$NAME@$VERSION" version >/dev/null 2>&1; then
-            echo "$NAME@$VERSION is already on npm — nothing to release."
-            echo "publish=false" >> "$GITHUB_OUTPUT"
+            echo "$NAME@$VERSION is already on npm; nothing to release."
+            echo "mode=skip" >> "$GITHUB_OUTPUT"
+          elif npm view "$NAME" name >/dev/null 2>"$RUNNER_TEMP/npm-view.log"; then
+            echo "$NAME@$VERSION is new; releasing."
+            echo "mode=publish" >> "$GITHUB_OUTPUT"
+          elif grep -q "E404" "$RUNNER_TEMP/npm-view.log"; then
+            echo "$NAME is not on npm yet; releasing its first version."
+            echo "mode=publish" >> "$GITHUB_OUTPUT"
           else
-            echo "$NAME@$VERSION is new — releasing."
-            echo "publish=true" >> "$GITHUB_OUTPUT"
+            # A registry outage must not be mistaken for a package that does not exist.
+            cat "$RUNNER_TEMP/npm-view.log" >&2
+            exit 1
           fi
 
-      - name: Type-check
-        if: steps.check.outputs.publish == 'true'
-        run: npm run typecheck
+      # A token npm does not accept otherwise surfaces only on the upload, as a misleading 404.
+      - name: Check the npm token
+        if: steps.check.outputs.mode == 'publish'
+        run: npm whoami
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
 
-      - name: Test
-        if: steps.check.outputs.publish == 'true'
-        run: npm test
+      # The tag must be free, or the release would end half done after the upload.
+      - name: Check the release tag is free
+        if: steps.check.outputs.mode == 'publish'
+        run: |
+          TAG="v${{ steps.check.outputs.version }}"
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null; then
+            echo "Tag $TAG already exists on origin." >&2
+            exit 1
+          fi
 
-      - name: Build
-        if: steps.check.outputs.publish == 'true'
-        run: npm run build
+      - name: Read the release notes from CHANGELOG.md
+        if: steps.check.outputs.mode == 'publish'
+        env:
+          VERSION: ${{ steps.check.outputs.version }}
+        run: |
+          awk -v heading="## [$VERSION]" '
+            index($0, heading) == 1 { found = 1; next }
+            found && (/^## \[/ || /^\[.+\]: /) { exit }
+            found { print }
+          ' CHANGELOG.md > "$RUNNER_TEMP/release-notes.md"
 
-      - name: Bundle size budget
-        if: steps.check.outputs.publish == 'true'
-        run: npm run size
+          if ! grep -q '[^[:space:]]' "$RUNNER_TEMP/release-notes.md"; then
+            echo "CHANGELOG.md has no section for $VERSION." >&2
+            exit 1
+          fi
 
-      - name: Verify the packed artifact before publishing
-        if: steps.check.outputs.publish == 'true'
+      - name: Format
+        if: steps.check.outputs.mode == 'publish'
+        run: npm run format:check --if-present
+
+      - name: Verify
+        if: steps.check.outputs.mode == 'publish'
+        run: npm run verify
+
+      # The gate measures the source; this installs the tarball a consumer gets and loads it
+      # through both entry points.
+      - name: Smoke test the packed tarball
+        if: steps.check.outputs.mode == 'publish'
+        env:
+          NAME: ${{ steps.check.outputs.name }}
         run: |
           npm pack
-          WORK="$(mktemp -d)"
-          cd "$WORK"
+          TARBALL="$(ls "$GITHUB_WORKSPACE"/*.tgz)"
+          cd "$(mktemp -d)"
           npm init -y >/dev/null
-          npm install --ignore-scripts "$GITHUB_WORKSPACE"/handijit-memoizer-*.tgz
-
-          cat > esm.mjs <<'EOF'
-          import Memoizer from "@handijit/memoizer";
-          const memoized = new Memoizer().memoize((n) => n * 2);
-          if (memoized(2) !== 4) throw new Error("ESM entry is broken");
-          console.log("ESM entry OK");
-          EOF
-
-          cat > cjs.cjs <<'EOF'
-          const { Memoizer } = require("@handijit/memoizer");
-          const memoized = new Memoizer().memoize((n) => n * 2);
-          if (memoized(2) !== 4) throw new Error("CJS entry is broken");
-          console.log("CJS entry OK");
-          EOF
-
-          node esm.mjs
-          node cjs.cjs
+          npm install --ignore-scripts "$TARBALL"
+          node --input-type=module -e "await import(process.env.NAME); console.log('ESM entry OK')"
+          node -e "require(process.env.NAME); console.log('CJS entry OK')"
 
       - name: Publish
-        if: steps.check.outputs.publish == 'true'
+        if: steps.check.outputs.mode == 'publish'
         run: npm publish --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
 
       - name: Tag the release
-        if: steps.check.outputs.publish == 'true'
+        if: steps.check.outputs.mode == 'publish'
         run: |
           TAG="v${{ steps.check.outputs.version }}"
           git config user.name "github-actions[bot]"
@@ -107,10 +129,21 @@ jobs:
           git tag -a "$TAG" -m "$TAG"
           git push origin "$TAG"
 
-      - name: Summary
+      - name: Create the GitHub Release
+        if: steps.check.outputs.mode == 'publish'
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          if [ "${{ steps.check.outputs.publish }}" = "true" ]; then
-            echo "Published ${{ steps.check.outputs.name }}@${{ steps.check.outputs.version }}" >> "$GITHUB_STEP_SUMMARY"
+          TAG="v${{ steps.check.outputs.version }}"
+          gh release create "$TAG" --verify-tag --title "$TAG" --notes-file "$RUNNER_TEMP/release-notes.md"
+
+      - name: Summary
+        env:
+          PACKAGE: ${{ steps.check.outputs.name }}@${{ steps.check.outputs.version }}
+          MODE: ${{ steps.check.outputs.mode }}
+        run: |
+          if [ "$MODE" = "publish" ]; then
+            echo "Published $PACKAGE" >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "Skipped: ${{ steps.check.outputs.name }}@${{ steps.check.outputs.version }} is already on npm. Bump the version in package.json to release." >> "$GITHUB_STEP_SUMMARY"
+            echo "Skipped: $PACKAGE is already on npm. Bump the version in package.json to release." >> "$GITHUB_STEP_SUMMARY"
           fi
