@@ -1,29 +1,9 @@
 {
+  "extends": "@handijitcom/config/tsconfig/library.json",
   "compilerOptions": {
     // Node 24 is the supported floor and every evergreen browser has shipped
     // ES2022 since 2022, so there is nothing to downlevel for.
     "target": "ES2022",
-    "module": "ESNext",
-    "lib": ["ES2023", "DOM"],
-    "moduleResolution": "bundler",
-    "noEmit": false,
-
-    /* Strictness */
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-    "noImplicitOverride": true,
-    "useUnknownInCatchVariables": true,
-
-    /* Interop */
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
-    "isolatedModules": true
-  },
-  "include": ["lib", "global.d.ts"],
-  "exclude": ["node_modules", "__tests__", "build"]
+    "lib": ["ES2023", "DOM"]
+  }
 }

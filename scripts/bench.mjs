@@ -48,7 +48,11 @@ for (const size of [100, 1000, 10_000, 50_000]) {
   const run = memoizer.memoize((n) => n * 2, [], undefined, { maxSize: 0 });
   for (let i = 0; i < size; i++) run(i);
   const target = size - 1;
-  time(`${String(size).padStart(6)} entries, hit on last inserted`, () => run(target), 20_000);
+  time(
+    `${String(size).padStart(6)} entries, hit on last inserted`,
+    () => run(target),
+    20_000
+  );
 }
 
 console.log("\nKey building cost by argument shape");

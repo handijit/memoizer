@@ -108,13 +108,13 @@ Browser, no build step:
 Memoization trades memory for time, and building the cache key is not free.
 Roughly:
 
-| Situation                                              | Worth memoizing? |
-| ------------------------------------------------------ | ---------------- |
-| Function takes longer than ~1 µs and repeats its inputs | Yes              |
-| Parsing, formatting, tree walking, derived state        | Yes              |
-| Deduplicating in-flight network requests                | Yes              |
-| Trivial arithmetic, property access                     | No — the key costs more |
-| Every call has unique arguments                         | No — pure overhead |
+| Situation                                                   | Worth memoizing?                  |
+| ----------------------------------------------------------- | --------------------------------- |
+| Function takes longer than ~1 µs and repeats its inputs     | Yes                               |
+| Parsing, formatting, tree walking, derived state            | Yes                               |
+| Deduplicating in-flight network requests                    | Yes                               |
+| Trivial arithmetic, property access                         | No — the key costs more           |
+| Every call has unique arguments                             | No — pure overhead                |
 | The function is not pure (reads a clock, random, I/O state) | No — you will cache stale answers |
 
 See [Performance](#performance) for measured key-building costs.
@@ -134,11 +134,11 @@ new Memoizer(params?: MemoizerParams)
 
 | Option                  | Type      | Default | Description                                                          |
 | ----------------------- | --------- | ------- | -------------------------------------------------------------------- |
-| `maxSize`               | `number`  | `1000`  | Cached results per memoized function. `0` or `Infinity` = unbounded.  |
-| `ttl`                   | `number`  | —       | Milliseconds a result stays valid. Omitted means no expiry.           |
-| `cacheRejectedPromises` | `boolean` | `false` | Keep rejected promises cached instead of evicting them.               |
-| `hasLogs`               | `boolean` | `false` | Log every cache hit to the console.                                   |
-| `trace`                 | `boolean` | `false` | Expose the instance as `window.__memoizer__` in browsers.               |
+| `maxSize`               | `number`  | `1000`  | Cached results per memoized function. `0` or `Infinity` = unbounded. |
+| `ttl`                   | `number`  | —       | Milliseconds a result stays valid. Omitted means no expiry.          |
+| `cacheRejectedPromises` | `boolean` | `false` | Keep rejected promises cached instead of evicting them.              |
+| `hasLogs`               | `boolean` | `false` | Log every cache hit to the console.                                  |
+| `trace`                 | `boolean` | `false` | Expose the instance as `window.__memoizer__` in browsers.            |
 
 ```js
 const memoizer = new Memoizer({ maxSize: 500, ttl: 60_000 });
@@ -162,19 +162,19 @@ memoize<F extends AnyFunction>(
 ): Memoized<F>
 ```
 
-| Parameter | Type                                      | Description                                                                 |
-| --------- | ----------------------------------------- | --------------------------------------------------------------------------- |
-| `fn`      | `F`                                       | The function to memoize.                                                     |
-| `deps`    | `unknown[] \| (() => unknown[])`          | Invalidate the cache when these change. See [Dependencies](#dependencies).   |
-| `context` | `ThisParameterType<F>`                    | Bound as `this`. See [Context and `this`](#context-and-this).                |
-| `options` | `MemoizeOptions<F>`                       | Per-function overrides.                                                      |
+| Parameter | Type                             | Description                                                                |
+| --------- | -------------------------------- | -------------------------------------------------------------------------- |
+| `fn`      | `F`                              | The function to memoize.                                                   |
+| `deps`    | `unknown[] \| (() => unknown[])` | Invalidate the cache when these change. See [Dependencies](#dependencies). |
+| `context` | `ThisParameterType<F>`           | Bound as `this`. See [Context and `this`](#context-and-this).              |
+| `options` | `MemoizeOptions<F>`              | Per-function overrides.                                                    |
 
 `options` accepts `maxSize`, `ttl` and `cacheRejectedPromises` — overriding the
 instance defaults — plus:
 
-| Option     | Type                              | Description                                                                       |
-| ---------- | --------------------------------- | --------------------------------------------------------------------------------- |
-| `resolver` | `(...args: Parameters<F>) => string` | Build the cache key yourself. See [Custom keys](#custom-keys-with-resolver).   |
+| Option     | Type                                 | Description                                                                  |
+| ---------- | ------------------------------------ | ---------------------------------------------------------------------------- |
+| `resolver` | `(...args: Parameters<F>) => string` | Build the cache key yourself. See [Custom keys](#custom-keys-with-resolver). |
 
 Each call to `memoize` creates its **own** cache. Memoizing the same function
 twice gives two independent caches:
@@ -299,7 +299,7 @@ A dependency change clears the **whole** cache for that function, not just the
 current arguments.
 
 **Array form vs getter form.** An array is captured once, so it can only observe
-mutations *inside* the values it holds. To track a rebindable primitive, pass a
+mutations _inside_ the values it holds. To track a rebindable primitive, pass a
 getter — it is re-read on every call:
 
 ```js
@@ -570,16 +570,16 @@ and set a `ttl` so entries do not go stale.
 Arguments are serialised into a type-tagged structural key, which is what makes
 lookups constant-time and comparisons predictable:
 
-| Input                                      | Behaviour                                          |
-| ------------------------------------------- | -------------------------------------------------- |
-| Primitives                                  | `Object.is` semantics — `NaN` matches, `0 ≠ -0`     |
-| Plain objects, arrays                       | By content; key order does not matter               |
-| `Date`, `RegExp`, `Map`, `Set`, `Error`     | By value; `Map`/`Set` ignore insertion order        |
-| `URL`, `URLSearchParams`                    | By their string form                                |
-| Typed arrays, `ArrayBuffer`, `DataView`     | Byte by byte                                        |
-| Class instances                             | By prototype **and** own fields                     |
-| Functions, `WeakMap`, `Promise`, DOM nodes  | By reference — they expose no structure             |
-| Circular references                         | Handled                                             |
+| Input                                      | Behaviour                                       |
+| ------------------------------------------ | ----------------------------------------------- |
+| Primitives                                 | `Object.is` semantics — `NaN` matches, `0 ≠ -0` |
+| Plain objects, arrays                      | By content; key order does not matter           |
+| `Date`, `RegExp`, `Map`, `Set`, `Error`    | By value; `Map`/`Set` ignore insertion order    |
+| `URL`, `URLSearchParams`                   | By their string form                            |
+| Typed arrays, `ArrayBuffer`, `DataView`    | Byte by byte                                    |
+| Class instances                            | By prototype **and** own fields                 |
+| Functions, `WeakMap`, `Promise`, DOM nodes | By reference — they expose no structure         |
+| Circular references                        | Handled                                         |
 
 Only own enumerable properties participate, including symbol keys.
 
@@ -631,12 +631,12 @@ without using it leaves nothing behind.
 
 Entry points:
 
-| Consumer               | File               |
-| ---------------------- | ------------------ |
-| ESM / bundlers         | `build/index.mjs`  |
-| CommonJS               | `build/index.cjs`  |
-| `<script>` / CDN       | `build/index.umd.js` (global `memoizer`) |
-| TypeScript             | `build/index.d.ts` |
+| Consumer         | File                                     |
+| ---------------- | ---------------------------------------- |
+| ESM / bundlers   | `build/index.mjs`                        |
+| CommonJS         | `build/index.cjs`                        |
+| `<script>` / CDN | `build/index.umd.js` (global `memoizer`) |
+| TypeScript       | `build/index.d.ts`                       |
 
 ---
 
@@ -719,11 +719,16 @@ Required code changes:
 
 ```bash
 npm install
-npm run verify   # typecheck, test with coverage, build, bundle-size budget
-npm run bench    # performance numbers
+npm run verify      # lint (ESLint + Prettier), typecheck, test with coverage, build, bundle-size budget, package lint
+npm run test:smoke  # install the packed tarball in a clean project and load it (after a build)
+npm run bench       # performance numbers
 ```
 
-182 tests, enforced at 100% for statements, branches, functions and lines.
+182 Vitest tests (node, and jsdom for the `trace` path), enforced at 100% for
+statements, branches, functions and lines. The ESLint, Prettier, TypeScript and
+Vitest settings come from [`@handijitcom/config`](https://github.com/handijit/config)'s
+library presets; CI runs the gate on Node 24 (the engines floor) and 26 (the
+Active LTS).
 
 ## Releasing
 
@@ -734,14 +739,17 @@ npm version patch   # or minor / major
 git push origin master
 ```
 
-The publish workflow then type-checks, tests, builds, checks the bundle-size
-budget, installs the packed tarball into a clean project to confirm both entry
-points work, publishes to npm with provenance, and pushes a `v<version>` tag.
+The publish workflow then lints, type-checks, tests, builds, checks the
+bundle-size budget, lints the package (`publint`, `attw`), installs the packed
+tarball into a clean project to confirm both entry points work, publishes to npm
+with provenance, pushes a `v<version>` tag and creates a GitHub Release from the
+CHANGELOG section.
 
 A commit that does not change the version is not an error — the workflow sees
 the version already on npm and skips the release.
 
 <!-- handijit:about:start -->
+
 ## About Han Dijit
 
 `@handijitcom/memoizer` is built and maintained by **[Han Dijit](https://www.handijit.com)**, a software company serving businesses across Türkiye: web, e-commerce, mobile, artificial intelligence, cyber security and enterprise software projects.

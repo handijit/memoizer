@@ -1,3 +1,5 @@
+import { beforeEach, describe, expect, test, vi } from "vitest";
+
 import Memoizer from "../lib/index";
 
 describe("dependencies", () => {
@@ -10,7 +12,7 @@ describe("dependencies", () => {
   describe("array form", () => {
     test("should reuse the cache while dependencies are unchanged", () => {
       const settings = { rate: 2 };
-      const spy = jest.fn((price: number) => price * settings.rate);
+      const spy = vi.fn((price: number) => price * settings.rate);
       const total = memoizer.memoize(spy, [settings]);
 
       expect(total(10)).toBe(20);
@@ -20,7 +22,7 @@ describe("dependencies", () => {
 
     test("should re-run when a dependency object mutates", () => {
       const settings = { rate: 2 };
-      const spy = jest.fn((price: number) => price * settings.rate);
+      const spy = vi.fn((price: number) => price * settings.rate);
       const total = memoizer.memoize(spy, [settings]);
 
       expect(total(10)).toBe(20);
@@ -45,7 +47,7 @@ describe("dependencies", () => {
 
     test("should drop the whole cache when dependencies change", () => {
       const settings = { rate: 2 };
-      const spy = jest.fn((price: number) => price * settings.rate);
+      const spy = vi.fn((price: number) => price * settings.rate);
       const total = memoizer.memoize(spy, [settings]);
 
       total(10);
@@ -60,7 +62,7 @@ describe("dependencies", () => {
 
     test("should react to a mutated array dependency", () => {
       const items: number[] = [1];
-      const spy = jest.fn(() => items.length);
+      const spy = vi.fn(() => items.length);
       const count = memoizer.memoize(spy, [items]);
 
       expect(count()).toBe(1);
@@ -72,7 +74,7 @@ describe("dependencies", () => {
     test("should track several dependencies", () => {
       const a = { v: 1 };
       const b = { v: 1 };
-      const spy = jest.fn(() => a.v + b.v);
+      const spy = vi.fn(() => a.v + b.v);
       const sum = memoizer.memoize(spy, [a, b]);
 
       expect(sum()).toBe(2);
@@ -83,7 +85,7 @@ describe("dependencies", () => {
 
     test("should not invalidate on the first observation", () => {
       const settings = { rate: 2 };
-      const spy = jest.fn((price: number) => price * settings.rate);
+      const spy = vi.fn((price: number) => price * settings.rate);
       const total = memoizer.memoize(spy, [settings]);
 
       total(10);
@@ -92,7 +94,7 @@ describe("dependencies", () => {
     });
 
     test("should behave like a plain memoize when deps are empty", () => {
-      const spy = jest.fn((n: number) => n);
+      const spy = vi.fn((n: number) => n);
       const run = memoizer.memoize(spy, []);
 
       run(1);
@@ -104,7 +106,7 @@ describe("dependencies", () => {
   describe("getter form", () => {
     test("should observe primitive dependencies changing", () => {
       let rate = 2;
-      const spy = jest.fn((price: number) => price * rate);
+      const spy = vi.fn((price: number) => price * rate);
       const total = memoizer.memoize(spy, () => [rate]);
 
       expect(total(10)).toBe(20);
@@ -118,7 +120,7 @@ describe("dependencies", () => {
 
     test("should keep the cache while the getter returns equal values", () => {
       let rate = 2;
-      const spy = jest.fn((price: number) => price * rate);
+      const spy = vi.fn((price: number) => price * rate);
       const total = memoizer.memoize(spy, () => [rate]);
 
       total(10);
@@ -128,7 +130,7 @@ describe("dependencies", () => {
     });
 
     test("should support an empty getter result", () => {
-      const spy = jest.fn((n: number) => n);
+      const spy = vi.fn((n: number) => n);
       const run = memoizer.memoize(spy, () => []);
 
       run(1);
@@ -137,7 +139,7 @@ describe("dependencies", () => {
     });
 
     test("should fall back to an uncached call when the getter throws", () => {
-      const spy = jest.fn((n: number) => n);
+      const spy = vi.fn((n: number) => n);
       const run = memoizer.memoize(spy, () => {
         throw new Error("deps exploded");
       });

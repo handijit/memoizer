@@ -1,3 +1,5 @@
+import { describe, expect, test, vi } from "vitest";
+
 import CacheStore, { MISS } from "../lib/store/CacheStore";
 
 const UNBOUNDED = 0;
@@ -205,45 +207,45 @@ describe("CacheStore", () => {
 
   describe("time to live", () => {
     test("should keep entries before expiry", () => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
       const store = new CacheStore(UNBOUNDED, 1000);
       store.set("a", 1);
 
-      jest.advanceTimersByTime(999);
+      vi.advanceTimersByTime(999);
       expect(store.read("a")).toBe(1);
     });
 
     test("should drop entries once expired", () => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
       const store = new CacheStore(UNBOUNDED, 1000);
       store.set("a", 1);
 
-      jest.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(1000);
       expect(store.read("a")).toBe(MISS);
       expect(store.size).toBe(0);
     });
 
     test("should restart the clock when a key is rewritten", () => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
       const store = new CacheStore(UNBOUNDED, 1000);
       store.set("a", 1);
 
-      jest.advanceTimersByTime(900);
+      vi.advanceTimersByTime(900);
       store.set("a", 2);
-      jest.advanceTimersByTime(900);
+      vi.advanceTimersByTime(900);
 
       expect(store.read("a")).toBe(2);
     });
 
     test("should expire an entry that sits in the middle of the list", () => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
       const store = new CacheStore(UNBOUNDED, 1000);
       store.set("a", 1);
-      jest.advanceTimersByTime(600);
+      vi.advanceTimersByTime(600);
       store.set("b", 2);
       store.set("c", 3);
 
-      jest.advanceTimersByTime(500);
+      vi.advanceTimersByTime(500);
       expect(store.read("a")).toBe(MISS);
       expect(store.read("b")).toBe(2);
       expect(store.read("c")).toBe(3);
@@ -251,20 +253,20 @@ describe("CacheStore", () => {
     });
 
     test("should never expire when ttl is 0", () => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
       const store = new CacheStore(UNBOUNDED, NO_TTL);
       store.set("a", 1);
 
-      jest.advanceTimersByTime(10_000_000);
+      vi.advanceTimersByTime(10_000_000);
       expect(store.read("a")).toBe(1);
     });
 
     test("should not schedule timers", () => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
       const store = new CacheStore(UNBOUNDED, 1000);
       store.set("a", 1);
 
-      expect(jest.getTimerCount()).toBe(0);
+      expect(vi.getTimerCount()).toBe(0);
       expect(store.size).toBe(1);
     });
   });

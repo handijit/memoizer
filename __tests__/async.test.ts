@@ -1,3 +1,5 @@
+import { beforeEach, describe, expect, test, vi } from "vitest";
+
 import Memoizer from "../lib/index";
 
 describe("promise results", () => {
@@ -8,7 +10,7 @@ describe("promise results", () => {
   });
 
   test("should cache a resolved promise", async () => {
-    const spy = jest.fn(async (id: number) => `user-${id}`);
+    const spy = vi.fn(async (id: number) => `user-${id}`);
     const load = memoizer.memoize(spy);
 
     await expect(load(1)).resolves.toBe("user-1");
@@ -17,7 +19,7 @@ describe("promise results", () => {
   });
 
   test("should deduplicate concurrent calls onto one promise", async () => {
-    const spy = jest.fn(async (id: number) => `user-${id}`);
+    const spy = vi.fn(async (id: number) => `user-${id}`);
     const load = memoizer.memoize(spy);
 
     const [a, b, c] = await Promise.all([load(1), load(1), load(1)]);
@@ -28,7 +30,7 @@ describe("promise results", () => {
 
   test("should not keep a rejected promise in the cache", async () => {
     let attempt = 0;
-    const spy = jest.fn(async () => {
+    const spy = vi.fn(async () => {
       attempt++;
       if (attempt === 1) throw new Error("network down");
       return "recovered";
@@ -41,7 +43,7 @@ describe("promise results", () => {
   });
 
   test("should evict only the rejected argument set", async () => {
-    const spy = jest.fn(async (id: number) => {
+    const spy = vi.fn(async (id: number) => {
       if (id === 1) throw new Error("bad id");
       return `user-${id}`;
     });
@@ -58,7 +60,7 @@ describe("promise results", () => {
   });
 
   test("should keep a rejected promise when explicitly asked to", async () => {
-    const spy = jest.fn(async () => {
+    const spy = vi.fn(async () => {
       throw new Error("permanent");
     });
     const load = memoizer.memoize(spy, [], undefined, {
@@ -72,7 +74,7 @@ describe("promise results", () => {
 
   test("should honour the instance-wide rejection setting", async () => {
     const keeping = new Memoizer({ cacheRejectedPromises: true });
-    const spy = jest.fn(async () => {
+    const spy = vi.fn(async () => {
       throw new Error("permanent");
     });
     const load = keeping.memoize(spy);
@@ -84,7 +86,7 @@ describe("promise results", () => {
 
   test("should let a per-function option override the instance setting", async () => {
     const keeping = new Memoizer({ cacheRejectedPromises: true });
-    const spy = jest.fn(async () => {
+    const spy = vi.fn(async () => {
       throw new Error("transient");
     });
     const load = keeping.memoize(spy, [], undefined, {
@@ -102,7 +104,7 @@ describe("promise results", () => {
         resolve("done");
       },
     };
-    const spy = jest.fn(() => thenable);
+    const spy = vi.fn(() => thenable);
     const run = memoizer.memoize(spy);
 
     expect(run()).toBe(thenable);
@@ -111,7 +113,7 @@ describe("promise results", () => {
   });
 
   test("should drop the entry only after the rejection settles", async () => {
-    const spy = jest.fn(async () => {
+    const spy = vi.fn(async () => {
       throw new Error("late");
     });
     const load = memoizer.memoize(spy);

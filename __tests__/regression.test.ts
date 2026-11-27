@@ -1,3 +1,5 @@
+import { beforeEach, describe, expect, test, vi } from "vitest";
+
 import Memoizer from "../lib/index";
 
 describe("v2 regressions", () => {
@@ -8,7 +10,7 @@ describe("v2 regressions", () => {
   });
 
   test("falsy results were recomputed on every call and re-inserted", () => {
-    const spy = jest.fn((n: number) => n % 2 === 0);
+    const spy = vi.fn((n: number) => n % 2 === 0);
     const isEven = memoizer.memoize(spy);
 
     for (let i = 0; i < 5; i++) expect(isEven(3)).toBe(false);
@@ -60,7 +62,7 @@ describe("v2 regressions", () => {
   });
 
   test("a circular argument threw RangeError after running the function", () => {
-    const spy = jest.fn((node: { name: string }) => node.name);
+    const spy = vi.fn((node: { name: string }) => node.name);
     const read = memoizer.memoize(spy);
     const node: Record<string, unknown> = { name: "x" };
     node.self = node;
@@ -80,7 +82,7 @@ describe("v2 regressions", () => {
 
   test("a rejected promise was cached permanently", async () => {
     let attempt = 0;
-    const spy = jest.fn(async () => {
+    const spy = vi.fn(async () => {
       attempt++;
       if (attempt < 3) throw new Error(`network down #${attempt}`);
       return "ok";
@@ -94,7 +96,7 @@ describe("v2 regressions", () => {
   });
 
   test("NaN arguments never hit and appended an entry per call", () => {
-    const spy = jest.fn((n: number) => String(n));
+    const spy = vi.fn((n: number) => String(n));
     const run = memoizer.memoize(spy);
 
     for (let i = 0; i < 4; i++) run(NaN);
@@ -111,7 +113,7 @@ describe("v2 regressions", () => {
   });
 
   test("zero-argument functions were never cached", () => {
-    const spy = jest.fn(() => "value");
+    const spy = vi.fn(() => "value");
     const get = memoizer.memoize(spy);
 
     get();
@@ -145,7 +147,7 @@ describe("v2 regressions", () => {
 
   test("deps compared by index missed a shrinking dependency list", () => {
     let deps: unknown[] = [{ a: 1 }, { b: 2 }];
-    const spy = jest.fn(() => deps.length);
+    const spy = vi.fn(() => deps.length);
     const count = memoizer.memoize(spy, () => deps);
 
     expect(count()).toBe(2);

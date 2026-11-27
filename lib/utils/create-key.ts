@@ -52,11 +52,7 @@ const numberToken = (val: number): string =>
   Object.is(val, -0) ? "-0" : String(val);
 
 const bytesToken = (view: ArrayBufferView): string => {
-  const bytes = new Uint8Array(
-    view.buffer,
-    view.byteOffset,
-    view.byteLength
-  );
+  const bytes = new Uint8Array(view.buffer, view.byteOffset, view.byteLength);
   let out = "";
   for (let i = 0; i < bytes.length; i++) out += `,${bytes[i]}`;
   return out;
@@ -230,7 +226,7 @@ const serializeObject = (
   const stringKeys = Object.keys(obj).sort();
   out.push(String(stringKeys.length));
   for (let i = 0; i < stringKeys.length; i++) {
-    const key = stringKeys[i];
+    const key = stringKeys[i]!;
     out.push(withLength(key));
     serialize((obj as Record<string, unknown>)[key], out, path);
   }
@@ -245,9 +241,9 @@ const serializeObject = (
 
   out.push(String(symbolTokens.length));
   for (let i = 0; i < symbolTokens.length; i++) {
-    out.push(withLength(symbolTokens[i].token));
+    out.push(withLength(symbolTokens[i]!.token));
     serialize(
-      (obj as Record<symbol, unknown>)[symbolTokens[i].symbol],
+      (obj as Record<symbol, unknown>)[symbolTokens[i]!.symbol],
       out,
       path
     );

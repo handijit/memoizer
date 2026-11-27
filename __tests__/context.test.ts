@@ -1,3 +1,5 @@
+import { beforeEach, describe, expect, test, vi } from "vitest";
+
 import Memoizer from "../lib/index";
 
 describe("context binding", () => {
@@ -64,7 +66,7 @@ describe("context binding", () => {
 
   test("should re-run when the context is tracked as a dependency", () => {
     const owner = { name: "Ada" };
-    const spy = jest.fn(function (this: { name: string }): string {
+    const spy = vi.fn(function (this: { name: string }): string {
       return this.name;
     });
     const read = memoizer.memoize(spy, [owner], owner);
@@ -76,7 +78,7 @@ describe("context binding", () => {
   });
 
   test("should work without a context", () => {
-    const spy = jest.fn((n: number) => n * 2);
+    const spy = vi.fn((n: number) => n * 2);
     const double = memoizer.memoize(spy);
 
     expect(double(2)).toBe(4);
@@ -84,13 +86,13 @@ describe("context binding", () => {
 
   test("should pass the context to a custom resolver", () => {
     const owner = { prefix: "p" };
-    const resolver = jest.fn(function (this: typeof owner, n: number) {
+    const resolver = vi.fn(function (this: typeof owner, n: number) {
       return `${this.prefix}:${n}`;
     });
     const run = memoizer.memoize((n: number) => n, [], owner, { resolver });
 
     run(1);
-    expect(resolver).toHaveBeenCalled();
-    expect(resolver.mock.results[0].value).toBe("p:1");
+    expect(resolver).toHaveBeenCalledTimes(1);
+    expect(resolver).toHaveReturnedWith("p:1");
   });
 });

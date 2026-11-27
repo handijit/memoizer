@@ -1,9 +1,11 @@
+import { describe, expect, test, vi } from "vitest";
+
 import Memoizer from "../lib/index";
 
 describe("memory behaviour", () => {
   test("should keep a hot loop bounded even when results are falsy", () => {
     const memoizer = new Memoizer();
-    const spy = jest.fn((n: number) => n % 2 === 0);
+    const spy = vi.fn((n: number) => n % 2 === 0);
     const isEven = memoizer.memoize(spy);
 
     for (let i = 0; i < 10_000; i++) isEven(3);
@@ -59,24 +61,26 @@ describe("memory behaviour", () => {
 
   test("should not retain the cache once the memoized function is dropped", async () => {
     const memoizer = new Memoizer();
-    let run: ((n: number) => number) | null = memoizer.memoize((n: number) => n);
-    for (let i = 0; i < 100; i++) run(i);
-
-    const ref = new WeakRef(run);
-    run = null;
+    // The memoized function is reachable only inside this scope; once it ends, nothing but the
+    // weak reference points at it.
+    const ref = ((): WeakRef<(n: number) => number> => {
+      const run = memoizer.memoize((n: number) => n);
+      for (let i = 0; i < 100; i++) run(i);
+      return new WeakRef(run);
+    })();
 
     expect(Object.values(memoizer)).not.toContain(ref.deref());
   });
 
   test("should not schedule any timers", () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const memoizer = new Memoizer({ ttl: 100 });
     const run = memoizer.memoize((n: number) => n);
 
     run(1);
     run(2);
 
-    expect(jest.getTimerCount()).toBe(0);
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   test("should survive many independent memoizations", () => {

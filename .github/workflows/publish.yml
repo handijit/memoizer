@@ -1,4 +1,4 @@
-# Han Dijit standard release (identical in every @handijitcom package).
+# Han Dijit standard release for @handijitcom packages.
 # A push to master that carries a version not yet on npm verifies, publishes with provenance,
 # tags `v<version>` and creates the GitHub Release. Any other push is a no-op.
 name: Publish to npm
@@ -27,7 +27,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: "24"
+          node-version: "26" # the Active LTS (section 14); ci.yml also checks the engines floor
           registry-url: "https://registry.npmjs.org"
           cache: npm
 
@@ -91,28 +91,15 @@ jobs:
             exit 1
           fi
 
-      - name: Format
-        if: steps.check.outputs.mode == 'publish'
-        run: npm run format:check --if-present
-
       - name: Verify
         if: steps.check.outputs.mode == 'publish'
         run: npm run verify
 
-      # The gate measures the source; this installs the tarball a consumer gets and loads it
-      # through both entry points.
+      # The gate measures the source; this installs the tarball a consumer gets and loads every
+      # entry by its published name, as an ES module and as CommonJS.
       - name: Smoke test the packed tarball
         if: steps.check.outputs.mode == 'publish'
-        env:
-          NAME: ${{ steps.check.outputs.name }}
-        run: |
-          npm pack
-          TARBALL="$(ls "$GITHUB_WORKSPACE"/*.tgz)"
-          cd "$(mktemp -d)"
-          npm init -y >/dev/null
-          npm install --ignore-scripts "$TARBALL"
-          node --input-type=module -e "await import(process.env.NAME); console.log('ESM entry OK')"
-          node -e "require(process.env.NAME); console.log('CJS entry OK')"
+        run: npm run test:smoke
 
       - name: Publish
         if: steps.check.outputs.mode == 'publish'

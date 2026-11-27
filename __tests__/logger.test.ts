@@ -1,8 +1,10 @@
+import { describe, expect, test, vi } from "vitest";
+
 import { writeToConsole } from "../lib/helpers/logger";
 
 describe("writeToConsole", () => {
   test("should report the function name and pass the value separately", () => {
-    const info = jest.spyOn(console, "info").mockImplementation(() => undefined);
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
 
     writeToConsole("getTotal", 42);
 
@@ -13,7 +15,7 @@ describe("writeToConsole", () => {
   });
 
   test("should fall back to a placeholder for unnamed functions", () => {
-    const info = jest.spyOn(console, "info").mockImplementation(() => undefined);
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
 
     writeToConsole("", null);
 
@@ -24,7 +26,7 @@ describe("writeToConsole", () => {
   });
 
   test("should not stringify the value", () => {
-    const info = jest.spyOn(console, "info").mockImplementation(() => undefined);
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
     const value = {
       toString(): string {
         throw new Error("must not be stringified");

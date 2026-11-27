@@ -1,3 +1,5 @@
+import { describe, expect, test, vi } from "vitest";
+
 import {
   createIdentityRegistry,
   supportsWeakSymbolKeys,
@@ -15,9 +17,13 @@ describe("identity registry", () => {
 
     test("should report false when WeakMap rejects symbol keys", () => {
       const original = WeakMap.prototype.set;
-      const spy = jest
+      const spy = vi
         .spyOn(WeakMap.prototype, "set")
-        .mockImplementation(function (this: WeakMap<object, unknown>, key, value) {
+        .mockImplementation(function (
+          this: WeakMap<object, unknown>,
+          key,
+          value
+        ) {
           if (typeof key === "symbol") {
             throw new TypeError("Invalid value used as weak map key");
           }

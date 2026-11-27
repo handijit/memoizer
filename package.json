@@ -1,6 +1,6 @@
 {
   "name": "@handijitcom/memoizer",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Fast, dependency-free memoization for JavaScript and TypeScript functions, with dependency tracking, LRU eviction and TTL.",
   "author": "Ahmet ilhan <ahmetilhn.dev@gmail.com>",
   "license": "MIT",
@@ -22,9 +22,14 @@
   "jsdelivr": "./build/index.umd.js",
   "exports": {
     ".": {
-      "types": "./build/index.d.ts",
-      "import": "./build/index.mjs",
-      "require": "./build/index.cjs",
+      "import": {
+        "types": "./build/index.d.mts",
+        "default": "./build/index.mjs"
+      },
+      "require": {
+        "types": "./build/index.d.ts",
+        "default": "./build/index.cjs"
+      },
       "default": "./build/index.mjs"
     },
     "./package.json": "./package.json"
@@ -33,18 +38,25 @@
   "files": [
     "build",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "engines": {
     "node": ">=24"
   },
+  "prettier": "@handijitcom/config/prettier",
   "scripts": {
     "build": "sh ./scripts/prod-build.sh",
     "dev": "sh ./scripts/dev-build.sh",
-    "test": "jest",
+    "lint": "eslint . --max-warnings 0 && prettier --check .",
+    "format": "prettier --write .",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json",
-    "verify": "npm run typecheck && npm run test && npm run build && npm run size",
+    "test": "vitest run --coverage",
     "size": "node ./scripts/report-size.mjs",
+    "lint:package": "publint && attw --pack .",
+    "test:smoke": "sh ./scripts/smoke-test.sh",
+    "bench": "node ./scripts/bench.mjs",
+    "verify": "npm run lint && npm run typecheck && npm run test && npm run build && npm run size && npm run lint:package",
     "prepublishOnly": "npm run verify"
   },
   "keywords": [
@@ -73,18 +85,21 @@
   ],
   "private": false,
   "devDependencies": {
-    "@babel/core": "^8.0.1",
-    "@babel/preset-env": "^8.0.2",
-    "@babel/preset-typescript": "^8.0.1",
+    "@arethetypeswrong/cli": "^0.18.5",
+    "@handijitcom/config": "^1.0.0",
     "@rollup/plugin-terser": "^1.0.0",
     "@rollup/plugin-typescript": "^12.3.0",
-    "@types/jest": "^30.0.0",
-    "babel-jest": "^30.4.1",
-    "jest": "^30.4.2",
-    "jest-environment-jsdom": "^30.4.1",
+    "@types/node": "^26.2.0",
+    "@typescript/native": "npm:typescript@^7.0.2",
+    "@vitest/coverage-v8": "^5.1.0",
+    "eslint": "^10.14.0",
+    "jsdom": "^31.0.0",
+    "prettier": "^3.9.10",
+    "publint": "^0.3.25",
     "rollup": "^4.62.4",
     "rollup-plugin-dts": "^6.5.1",
     "tslib": "^2.8.1",
-    "typescript": "^6.0.3"
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "vitest": "^5.1.0"
   }
 }

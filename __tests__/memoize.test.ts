@@ -1,3 +1,5 @@
+import { beforeEach, describe, expect, test, vi } from "vitest";
+
 import Memoizer from "../lib/index";
 
 describe("memoize", () => {
@@ -9,7 +11,7 @@ describe("memoize", () => {
 
   describe("caching by arguments", () => {
     test("should run the function once for repeated arguments", () => {
-      const spy = jest.fn((a: number, b: number) => a + b);
+      const spy = vi.fn((a: number, b: number) => a + b);
       const sum = memoizer.memoize(spy);
 
       expect(sum(1, 2)).toBe(3);
@@ -19,7 +21,7 @@ describe("memoize", () => {
     });
 
     test("should re-run for different arguments", () => {
-      const spy = jest.fn((a: number) => a * 2);
+      const spy = vi.fn((a: number) => a * 2);
       const double = memoizer.memoize(spy);
 
       expect(double(1)).toBe(2);
@@ -28,7 +30,7 @@ describe("memoize", () => {
     });
 
     test("should cache zero-argument calls", () => {
-      const spy = jest.fn(() => "value");
+      const spy = vi.fn(() => "value");
       const get = memoizer.memoize(spy);
 
       expect(get()).toBe("value");
@@ -37,7 +39,7 @@ describe("memoize", () => {
     });
 
     test("should distinguish argument counts", () => {
-      const spy = jest.fn((...args: unknown[]) => args.length);
+      const spy = vi.fn((...args: unknown[]) => args.length);
       const count = memoizer.memoize(spy);
 
       expect(count()).toBe(0);
@@ -47,7 +49,7 @@ describe("memoize", () => {
     });
 
     test("should match structurally equal object arguments", () => {
-      const spy = jest.fn((user: { id: number }) => user.id);
+      const spy = vi.fn((user: { id: number }) => user.id);
       const read = memoizer.memoize(spy);
 
       expect(read({ id: 1 })).toBe(1);
@@ -56,7 +58,7 @@ describe("memoize", () => {
     });
 
     test("should re-run when an object argument changes", () => {
-      const spy = jest.fn((user: { id: number }) => user.id);
+      const spy = vi.fn((user: { id: number }) => user.id);
       const read = memoizer.memoize(spy);
 
       read({ id: 1 });
@@ -65,7 +67,7 @@ describe("memoize", () => {
     });
 
     test("should observe mutation of an object argument", () => {
-      const spy = jest.fn((product: { price: number }) => product.price * 2);
+      const spy = vi.fn((product: { price: number }) => product.price * 2);
       const total = memoizer.memoize(spy);
       const product = { price: 10 };
 
@@ -76,7 +78,7 @@ describe("memoize", () => {
     });
 
     test("should not let a later mutation corrupt an existing entry", () => {
-      const spy = jest.fn((product: { price: number }) => product.price * 2);
+      const spy = vi.fn((product: { price: number }) => product.price * 2);
       const total = memoizer.memoize(spy);
       const product = { price: 10 };
 
@@ -94,7 +96,7 @@ describe("memoize", () => {
       const falsy = [0, -0, "", false, null, undefined, NaN];
 
       falsy.forEach((value) => {
-        const spy = jest.fn(() => value);
+        const spy = vi.fn(() => value);
         const get = memoizer.memoize(spy);
 
         const first = get();
@@ -112,7 +114,7 @@ describe("memoize", () => {
     });
 
     test("should return the identical object reference on a hit", () => {
-      const spy = jest.fn(() => ({ built: true }));
+      const spy = vi.fn(() => ({ built: true }));
       const build = memoizer.memoize(spy);
 
       expect(build()).toBe(build());
@@ -122,7 +124,7 @@ describe("memoize", () => {
 
   describe("argument edge cases", () => {
     test("should treat NaN arguments as a stable key", () => {
-      const spy = jest.fn((n: number) => String(n));
+      const spy = vi.fn((n: number) => String(n));
       const stringify = memoizer.memoize(spy);
 
       stringify(NaN);
@@ -131,7 +133,7 @@ describe("memoize", () => {
     });
 
     test("should separate 0 from -0", () => {
-      const spy = jest.fn((n: number) => 1 / n);
+      const spy = vi.fn((n: number) => 1 / n);
       const reciprocal = memoizer.memoize(spy);
 
       expect(reciprocal(0)).toBe(Infinity);
@@ -140,7 +142,7 @@ describe("memoize", () => {
     });
 
     test("should separate a number from its string form", () => {
-      const spy = jest.fn((v: unknown) => typeof v);
+      const spy = vi.fn((v: unknown) => typeof v);
       const typeOf = memoizer.memoize(spy);
 
       expect(typeOf(1)).toBe("number");
@@ -149,7 +151,7 @@ describe("memoize", () => {
     });
 
     test("should not collide on objects that hide state behind accessors", () => {
-      const spy = jest.fn((url: URL) => url.hostname);
+      const spy = vi.fn((url: URL) => url.hostname);
       const hostname = memoizer.memoize(spy);
 
       expect(hostname(new URL("https://a.com"))).toBe("a.com");
@@ -158,7 +160,7 @@ describe("memoize", () => {
     });
 
     test("should handle circular arguments without throwing", () => {
-      const spy = jest.fn((node: { name: string }) => node.name);
+      const spy = vi.fn((node: { name: string }) => node.name);
       const read = memoizer.memoize(spy);
       const node: Record<string, unknown> = { name: "root" };
       node.self = node;
@@ -174,7 +176,7 @@ describe("memoize", () => {
           throw new Error("getter exploded");
         },
       };
-      const spy = jest.fn((_input: unknown) => "ok");
+      const spy = vi.fn<(input: unknown) => string>(() => "ok");
       const run = memoizer.memoize(spy);
 
       expect(run(hostile)).toBe("ok");
@@ -191,7 +193,7 @@ describe("memoize", () => {
         node = next;
       }
 
-      const spy = jest.fn((_input: unknown) => "deep");
+      const spy = vi.fn<(input: unknown) => string>(() => "deep");
       const run = memoizer.memoize(spy);
 
       expect(run(head)).toBe("deep");
@@ -201,7 +203,7 @@ describe("memoize", () => {
 
   describe("errors", () => {
     test("should propagate a thrown error", () => {
-      const spy = jest.fn(() => {
+      const spy = vi.fn(() => {
         throw new Error("boom");
       });
       const run = memoizer.memoize(spy);
@@ -211,7 +213,7 @@ describe("memoize", () => {
 
     test("should not cache a thrown error", () => {
       let attempt = 0;
-      const spy = jest.fn(() => {
+      const spy = vi.fn(() => {
         attempt++;
         if (attempt === 1) throw new Error("transient");
         return "recovered";
@@ -236,7 +238,7 @@ describe("memoize", () => {
     });
 
     test("should clear a single memoized function", () => {
-      const spy = jest.fn((n: number) => n * 2);
+      const spy = vi.fn((n: number) => n * 2);
       const double = memoizer.memoize(spy);
 
       double(1);
@@ -248,8 +250,8 @@ describe("memoize", () => {
     });
 
     test("should clear every function of the instance", () => {
-      const first = jest.fn((n: number) => n);
-      const second = jest.fn((n: number) => n);
+      const first = vi.fn((n: number) => n);
+      const second = vi.fn((n: number) => n);
       const a = memoizer.memoize(first);
       const b = memoizer.memoize(second);
 
@@ -264,7 +266,7 @@ describe("memoize", () => {
     });
 
     test("should reset caches through init", () => {
-      const spy = jest.fn((n: number) => n);
+      const spy = vi.fn((n: number) => n);
       const run = memoizer.memoize(spy);
 
       run(1);
@@ -275,7 +277,7 @@ describe("memoize", () => {
     });
 
     test("should keep clearing effective across repeated cycles", () => {
-      const spy = jest.fn((n: number) => n);
+      const spy = vi.fn((n: number) => n);
       const run = memoizer.memoize(spy);
 
       for (let i = 0; i < 5; i++) {
@@ -289,7 +291,7 @@ describe("memoize", () => {
 
   describe("instance isolation", () => {
     test("should not share caches between instances", () => {
-      const spy = jest.fn((n: number) => n * 2);
+      const spy = vi.fn((n: number) => n * 2);
       const first = new Memoizer().memoize(spy);
       const second = new Memoizer().memoize(spy);
 
@@ -300,7 +302,7 @@ describe("memoize", () => {
     });
 
     test("should not share caches between memoizations of one function", () => {
-      const spy = jest.fn((n: number) => n * 2);
+      const spy = vi.fn((n: number) => n * 2);
       const first = memoizer.memoize(spy);
       const second = memoizer.memoize(spy);
 
@@ -311,7 +313,7 @@ describe("memoize", () => {
     });
 
     test("clearing one instance should not affect another", () => {
-      const spy = jest.fn((n: number) => n);
+      const spy = vi.fn((n: number) => n);
       const otherMemoizer = new Memoizer();
       const mine = memoizer.memoize(spy);
       const theirs = otherMemoizer.memoize(spy);
@@ -328,7 +330,7 @@ describe("memoize", () => {
 
   describe("options", () => {
     test("should honour a per-function maxSize", () => {
-      const spy = jest.fn((n: number) => n);
+      const spy = vi.fn((n: number) => n);
       const run = memoizer.memoize(spy, [], undefined, { maxSize: 2 });
 
       run(1);
@@ -374,47 +376,47 @@ describe("memoize", () => {
     });
 
     test("should expire results after ttl", () => {
-      jest.useFakeTimers();
-      const spy = jest.fn((n: number) => n);
+      vi.useFakeTimers();
+      const spy = vi.fn((n: number) => n);
       const run = memoizer.memoize(spy, [], undefined, { ttl: 1000 });
 
       run(1);
-      jest.advanceTimersByTime(500);
+      vi.advanceTimersByTime(500);
       run(1);
       expect(spy).toHaveBeenCalledTimes(1);
 
-      jest.advanceTimersByTime(500);
+      vi.advanceTimersByTime(500);
       run(1);
       expect(spy).toHaveBeenCalledTimes(2);
     });
 
     test("should honour an instance-wide ttl", () => {
-      jest.useFakeTimers();
-      const spy = jest.fn((n: number) => n);
+      vi.useFakeTimers();
+      const spy = vi.fn((n: number) => n);
       const expiring = new Memoizer({ ttl: 100 });
       const run = expiring.memoize(spy);
 
       run(1);
-      jest.advanceTimersByTime(101);
+      vi.advanceTimersByTime(101);
       run(1);
 
       expect(spy).toHaveBeenCalledTimes(2);
     });
 
     test("should ignore invalid ttl values", () => {
-      jest.useFakeTimers();
-      const spy = jest.fn((n: number) => n);
+      vi.useFakeTimers();
+      const spy = vi.fn((n: number) => n);
       const run = memoizer.memoize(spy, [], undefined, { ttl: -1 });
 
       run(1);
-      jest.advanceTimersByTime(10_000_000);
+      vi.advanceTimersByTime(10_000_000);
       run(1);
 
       expect(spy).toHaveBeenCalledTimes(1);
     });
 
     test("should use a custom resolver when given", () => {
-      const spy = jest.fn((user: { id: number; seenAt: number }) => user.id);
+      const spy = vi.fn((user: { id: number; seenAt: number }) => user.id);
       const read = memoizer.memoize(spy, [], undefined, {
         resolver: (user) => String(user.id),
       });

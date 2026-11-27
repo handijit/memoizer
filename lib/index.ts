@@ -57,7 +57,10 @@ class Memoizer {
 
     if (this.trace && isClient()) {
       window.__memoizer__ = this;
-      console.info("memoizer: tracing enabled, instance exposed as __memoizer__");
+      // eslint-disable-next-line no-console -- opt-in (`trace: true`): tracing announces itself once
+      console.info(
+        "memoizer: tracing enabled, instance exposed as __memoizer__"
+      );
     }
   };
 

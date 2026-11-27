@@ -1,3 +1,5 @@
+import { describe, expect, test } from "vitest";
+
 import createKey from "../lib/utils/create-key";
 
 const expectAllDistinct = (values: unknown[]): void => {
@@ -204,9 +206,13 @@ describe("createKey", () => {
     });
 
     test("should separate a hole from an explicit undefined", () => {
-      const sparse = [, 1] as unknown[];
+      // Index 0 is a hole: never assigned, unlike an explicit undefined.
+      const sparse: unknown[] = [];
+      sparse[1] = 1;
+      const sameShape: unknown[] = [];
+      sameShape[1] = 1;
       expect(createKey([sparse])).not.toBe(createKey([[undefined, 1]]));
-      expect(createKey([sparse])).toBe(createKey([[, 1] as unknown[]]));
+      expect(createKey([sparse])).toBe(createKey([sameShape]));
     });
 
     test("should separate an array from an object", () => {
@@ -284,13 +290,11 @@ describe("createKey", () => {
     });
 
     test("should key boxed primitives by value but apart from primitives", () => {
-      /* eslint-disable no-new-wrappers */
       expect(createKey([new Number(1)])).toBe(createKey([new Number(1)]));
       expect(createKey([new Number(1)])).not.toBe(createKey([new Number(2)]));
       expect(createKey([new Number(1)])).not.toBe(createKey([1]));
       expect(createKey([new String("a")])).not.toBe(createKey(["a"]));
       expect(createKey([new Boolean(true)])).not.toBe(createKey([true]));
-      /* eslint-enable no-new-wrappers */
     });
 
     test("should key typed arrays and buffers by bytes", () => {

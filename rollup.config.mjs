@@ -43,8 +43,13 @@ export default [
     plugins: [ts(), terser()],
   },
   {
+    // One bundled declaration, written twice: TypeScript reads the format of a declaration file
+    // from its extension, so the ESM entry needs a .d.mts next to the CommonJS .d.ts.
     input,
-    output: { file: "./build/index.d.ts", format: "es" },
+    output: [
+      { file: "./build/index.d.ts", format: "es" },
+      { file: "./build/index.d.mts", format: "es" },
+    ],
     plugins: [dts({ tsconfig: "./tsconfig.json" })],
   },
 ];

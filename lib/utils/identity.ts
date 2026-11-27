@@ -27,7 +27,10 @@ export const createIdentityRegistry = (
     : new Map<symbol, number>();
 
   const read = (
-    store: { get: (key: never) => number | undefined; set: (key: never, val: number) => unknown },
+    store: {
+      get: (key: never) => number | undefined;
+      set: (key: never, val: number) => unknown;
+    },
     val: object | symbol
   ): number => {
     let id = store.get(val as never);

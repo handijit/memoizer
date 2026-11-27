@@ -1,10 +1,13 @@
-# Han Dijit standard CI (identical in every @handijitcom package).
+# Han Dijit standard CI for @handijitcom packages, with the Node matrix of NPM_PACKAGE.md section 14.
 name: CI
 
-# Pull requests only. A push to master is gated by `publish.yml`, which runs the same commands
-# before anything reaches the registry.
+# Every pull request and every push to a branch other than master (NPM_PACKAGE.md section 14).
+# A push to master is gated by `publish.yml`, which runs the same commands before anything reaches
+# the registry; running both there would verify everything twice.
 on:
   pull_request:
+  push:
+    branches-ignore: [master]
   workflow_dispatch:
 
 permissions:
@@ -12,28 +15,36 @@ permissions:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  # A newer push to the same branch or pull request supersedes the run in progress.
+  cancel-in-progress: true
 
 jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        # The engines floor (package.json) and the current Active LTS.
+        node-version: ["24", "26"]
 
     steps:
       - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v7
         with:
-          node-version: "24"
+          node-version: ${{ matrix.node-version }}
           cache: npm
 
       # Dependency lifecycle scripts are an arbitrary-code-execution path during install.
       - name: Install dependencies
         run: npm ci --ignore-scripts
 
-      - name: Format
-        run: npm run format:check --if-present
-
-      # The one gate each package defines: typecheck, lint, tests, build, size...
+      # Lint (with Prettier), typecheck, tests with 100 % coverage, build, size, publint and attw.
       - name: Verify
         run: npm run verify
+
+      # The gate measures the source; this installs the tarball a consumer gets and loads every
+      # entry by its published name, as an ES module and as CommonJS.
+      - name: Smoke test the packed tarball
+        run: npm run test:smoke
