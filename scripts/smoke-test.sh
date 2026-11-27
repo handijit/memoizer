@@ -15,7 +15,7 @@ WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"; rm -f "$TARBALL"' EXIT
 cd "$WORK"
 npm init -y >/dev/null
-npm install --ignore-scripts --no-audit --no-fund --silent "$TARBALL"
+npm install --ignore-scripts --no-audit --no-fund --loglevel=error "$TARBALL"
 
 for ENTRY in $ENTRIES; do
   [ "$ENTRY" = "." ] && ENTRY=""
